@@ -3,18 +3,26 @@
 
     var bootmap = {
         options: {
-            lat: {
+            'lat': {
                 type: "float",
                 defaultValue: 52
             },
-            lng: {
+            'lng': {
                 type: "float",
                 defaultValue: 4
             },
-            zoom: {
+            'zoom': {
                 type: "int",
                 defaultValue: 8
             },
+            'wkt': {
+                type: "string",
+                defaultValue: ''
+            },
+            'mark-center': {
+                type: "bool",
+                defaultValue: false
+            }
         }
     };
 
@@ -27,6 +35,10 @@
             data = defaultValue;
         }
         return data;
+    };
+
+    bootmap.parseWKT = function(wkt) {
+        return false;
     };
 
     bootmap.getOptions = function($elem, options) {
@@ -52,6 +64,9 @@
                 }
             }
         });
+        if (undefined !== result['wkt']) {
+            result['wkt'] = bootmap.parseWKT(result['wkt']);
+        }
         return result;
     }
 
@@ -61,6 +76,12 @@
         options.center = new google.maps.LatLng(options.lat, options.lng);
         options.mapTypeId = google.maps.MapTypeId.ROADMAP;
         var map = new google.maps.Map(elem, options);
+        if (options['mark-center']) {
+            var marker = new google.maps.Marker({
+                map: map,
+                position: map.getCenter()
+            });
+        }
     };
 
     $.fn.bootmap = function(options) {

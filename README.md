@@ -18,7 +18,10 @@ an elegant piece of JavaScript handle the rest.
 Usage
 -----
 
+Insert into HTML like this:
+
     <div id="map1" data-map="map" data-lat="40" data-lng="4" style="width: 400px; height: 300px">map 1</div>
+
 
 Author
 ------

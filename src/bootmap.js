@@ -2,6 +2,7 @@
     "use strict";
 
     var bootmap = {
+        defaultZoom: 8,
         options: {
             lat: {
                 type: "float",
@@ -13,7 +14,7 @@
             },
             zoom: {
                 type: "int",
-                defaultValue: 8
+                defaultValue: 0
             },
             markCenter: {
                 type: "bool",
@@ -48,10 +49,14 @@
         return data;
     };
 
-    var getOption = function(index, $elem) {
+    var getOption = function(index, $elem, opts) {
         var o = bootmap.options[index];
-        var value = data($elem, index, o.defaultValue);
-        var v, skip = false;
+        var value, v, skip = false;
+        if (opts && undefined !== opts[index]) {
+            value = opts[index];
+        } else {
+            value = data($elem, index, o.defaultValue);
+        }
         switch (o.type) {
             case "int":
                 v = parseInt(value, 10);
@@ -73,31 +78,53 @@
         return v;
     };
 
-    var getOptions = function($elem, options) {
-        var center, result = {};
+    var getOptions = function($elem, opts) {
+        var center, options = {};
         $.each(bootmap.options, function(index, value) {
-            result[index] = getOption(index, $elem);
+            options[index] = getOption(index, $elem, opts);
         });
-        if (!$.isArray(result.overlays)) {
-            if (result.overlays) {
-                result.overlays = [ result.overlays ];
+        if (!$.isArray(options.overlays)) {
+            if (options.overlays) {
+                options.overlays = [ options.overlays ];
             } else {
-                result.overlays = [];
+                options.overlays = [];
             }
         }
-        center = new google.maps.LatLng(result.lat, result.lng);
-        result.mapOptions = {
+        center = new google.maps.LatLng(options.lat, options.lng);
+        options.autoZoom = options.overlays.length && !options.zoom;
+        options.zoom = options.zoom ? options.zoom : bootmap.defaultZoom;
+        options.mapOptions = {
             center: center,
             mapTypeId: google.maps.MapTypeId.ROADMAP,
-            zoom: result.zoom
+            zoom: options.zoom
         }
-        if (result.markCenter) {
-            result.overlays.push({
+        if (options.markCenter) {
+            options.overlays.push({
                 "type": "Point",
                 "coordinates": [ center.lng(), center.lat() ]
             });
         }
-        return result;
+        return options;
+    };
+
+    var getPathFromOverlay = function(overlay) {
+        var paths;
+        if (overlay.getPath) {
+            paths = overlay.getPath().getArray();
+        } else if (overlay.getPosition) {
+            paths = [ overlay.getPosition() ];
+        }
+        return paths;
+    };
+
+    var getBoundsFromOverlay = function(overlay) {
+        var bounds = new google.maps.LatLngBounds();
+        var path = getPathFromOverlay(overlay);
+        var j;
+        for (j=0; j < path.length; j++) {
+            bounds.extend(path[j]);
+        }
+        return bounds;
     };
 
     var createPath = function(coordinates) {
@@ -141,13 +168,22 @@
 
     var addOverlaysToMap = function(map, options) {
         var i, overlay, geoJSON;
+        var bounds;
+        if (options.autoZoom) {
+            bounds = new google.maps.LatLngBounds();
+        }
         for (i=0; i < options.overlays.length; i++) {
             geoJSON = options.overlays[i];
             overlay = createOverlay(geoJSON);
             if (overlay) {
                 overlay.setMap(map);
-                map.setZoom(8);
+                if (options.autoZoom) {
+                    bounds.union(getBoundsFromOverlay(overlay));
+                }
             }
+        }
+        if (options.autoZoom) {
+            map.fitBounds(bounds);
         }
     };
 
@@ -156,6 +192,10 @@
         options = getOptions($elem, options);
         map = new google.maps.Map(elem, options.mapOptions);
         addOverlaysToMap(map, options);
+        console.log(map.getZoom());
+        if (!options.zoom && map.getZoom() > bootmap.defaultZoom) {
+            map.setZoom(bootmap.defaultZoom);
+        }
     };
 
     $.fn.bootmap = function(options) {

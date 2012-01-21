@@ -19,7 +19,9 @@
 
     <div id="map1" data-map="map" data-lat="40" data-lng="4" style="width: 400px; height: 300px" data-mark-center="true">map 1</div>
 
-    <div id="map2" data-map="map" data-lat="40" data-lng="4" data-overlays='{ "type": "Polygon", "coordinates": [ [ [4, 40], [5, 40], [5, 45], [4, 45], [4, 40] ], [ [4.2, 41], [4.8, 44], [4.8, 41], [4.2, 41] ] ] }' style="width: 400px; height: 300px">map 2</div>
+    <div id="map2" data-map="map" data-lat="40" data-lng="4" data-overlays='{ "type": "Feature", "id": "Donut polygon", "geometry": {"type": "Polygon", "coordinates": [ [ [4, 40], [5, 40], [5, 45], [4, 45], [4, 40] ], [ [4.2, 41], [4.8, 44], [4.8, 41], [4.2, 41] ] ]} }' style="width: 400px; height: 300px">map 2</div>
+
+    <div id="map3" data-map="map" data-lat="40" data-lng="4" data-overlays='{ "type": "Feature", "id": "Demo marker", "geometry": {"type": "Point", "coordinates": [ 4, 40] } }' style="width: 400px; height: 300px">map 3</div>
 
 </body>
 

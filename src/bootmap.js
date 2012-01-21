@@ -147,54 +147,82 @@
     };
 
     var createOverlay = function(geoJSON) {
+        var feature = null;
+        var overlay = null;
         var overlayOptions = {
             strokeWeight: 3,
              fillColor: '#55FF55',
-             fillOpacity: 0.5
+             fillOpacity: 0.5,
+             editable: true
         };
+        if (geoJSON.type === 'Feature') {
+            feature = geoJSON;
+            geoJSON = geoJSON.geometry;
+        }
+        if (feature) {
+            overlayOptions.title = feature.id;
+        }
         switch(geoJSON.type) {
             case 'Point':
                 overlayOptions.position = new google.maps.LatLng(geoJSON.coordinates[1], geoJSON.coordinates[0]);
-                return new google.maps.Marker(overlayOptions);
+                overlay = new google.maps.Marker(overlayOptions);
+                break;
             case 'LineString':
                 overlayOptions.path = createPath(geoJSON.coordinates);
-                return new google.maps.Polyline(overlayOptions);
+                overlay = new google.maps.Polyline(overlayOptions);
+                break;
             case 'Polygon':
                 overlayOptions.paths = createPaths(geoJSON.coordinates);
-                return new google.maps.Polygon(overlayOptions);
+                overlay = new google.maps.Polygon(overlayOptions);
+                break;
         }
-        return null;
-    };
-
-    var addOverlaysToMap = function(map, options) {
-        var i, overlay, geoJSON;
-        var bounds;
-        if (options.autoZoom) {
-            bounds = new google.maps.LatLngBounds();
-        }
-        for (i=0; i < options.overlays.length; i++) {
-            geoJSON = options.overlays[i];
-            overlay = createOverlay(geoJSON);
-            if (overlay) {
-                overlay.setMap(map);
-                if (options.autoZoom) {
-                    bounds.union(getBoundsFromOverlay(overlay));
-                }
+        if (overlay) {
+            overlay.bootmap = {
+                feature: feature,
+                geoJSON: geoJSON
             }
         }
-        if (options.autoZoom) {
-            map.fitBounds(bounds);
+        return overlay;
+    };
+
+    var getOverlays = function(options) {
+        var geoJSON, overlay, i;
+        var overlays = [];
+        for (i=0; i < options.overlays.length; i++) {
+            overlay = createOverlay(options.overlays[i]);
+            if (overlay) {
+                overlays.push(overlay);
+            }
         }
+        return overlays;
     };
 
     bootmap.init = function(elem, options) {
-        var map, $elem = $(elem);
+        var $elem = $(elem);
+        var map, overlays, i, bounds, mapBounds, union;
+        var fit;
         options = getOptions($elem, options);
+        fit = options.autoZoom;
         map = new google.maps.Map(elem, options.mapOptions);
-        addOverlaysToMap(map, options);
-        console.log(map.getZoom());
-        if (!options.zoom && map.getZoom() > bootmap.defaultZoom) {
-            map.setZoom(bootmap.defaultZoom);
+        overlays = getOverlays(options);
+        if (overlays.length) {
+            bounds = new google.maps.LatLngBounds();
+            for (i=0; i < overlays.length; i++) {
+                bounds.union(getBoundsFromOverlay(overlays[i]));
+                overlays[i].setMap(map);
+            }
+            mapBounds = map.getBounds();
+            if (mapBounds) {
+                union = new google.maps.LatLngBounds(mapBounds.getSouthWest(), mapBounds.getNorthEast());
+                union.union(bounds);
+                if (union.equals(mapBounds)) {
+                    map.panToBounds(bounds);
+                    fit = false;
+                }
+            }
+            if (fit) {
+                map.fitBounds(bounds);
+            }
         }
     };
 

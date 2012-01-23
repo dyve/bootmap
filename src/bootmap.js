@@ -2,233 +2,269 @@
     "use strict";
 
     var bootmap = {
-        defaultZoom: 8,
         options: {
-            lat: {
-                type: "float",
-                defaultValue: 52
-            },
-            lng: {
-                type: "float",
-                defaultValue: 4
-            },
-            zoom: {
-                type: "int",
-                defaultValue: 0
-            },
-            markCenter: {
-                type: "bool",
-                defaultValue: false
-            },
-            overlays: {
-                type: "json",
-                defaultValue: ''
+            lat: { type: "float" },
+            lng: { type: "float" },
+            zoom: { type: "int", value: 8 },
+            type: { type: "string" },
+            input: { }
+        }
+    };
+
+    var getData = function($elem, index) {
+        return $elem.attr('data-' + index);
+    };
+
+    var getMapData = function($elem, options) {
+        var data = {};
+        var html = $.trim($elem.html());
+        $.each(bootmap.options, function(index, option) {
+            var value = options[index];
+            if (undefined === value) {
+                value = getData($elem, index);
             }
-        },
-        registry: {
+            switch (option.type) {
+                case "int":
+                    value = parseInt(value, 10);
+                    if (isNaN(value)) {
+                        value = option.value;
+                    }
+                    break;
+                case "float":
+                    value = parseFloat(value);
+                    if (isNaN(value)) {
+                        value = option.value;
+                    }
+                    break;
+            }
+            data[index] = value;
+        });
+        data.overlays = [];
+        if (html) {
+            data.overlays.push({
+                input: $elem[0],
+                $input: $elem,
+                rawContent: html,
+                json: $.parseJSON(html)
+            });
         }
-    };
-
-    var dashToCamel = function(str) {
-        return str.replace(/(\-[a-z])/g, function($1){return $1.toUpperCase().replace('-','');});
-    };
-
-    var camelToDash = function(str) {
-        return str.replace(/([A-Z])/g, function($1){return "-"+$1.toLowerCase();});
-    };
-
-    var data = function ($elem, indexCamel, defaultValue) {
-        var attr = "data-" + camelToDash(indexCamel);
-        var data = $elem.attr(attr);
-        if (undefined === data) {
-            data = $elem.data(indexCamel);
-        }
-        if (undefined === data) {
-            data = defaultValue;
+        if (data.input) {
+            $(data.input).each(function() {
+                var $this = $(this);
+                var overlay = {
+                    input: this,
+                    $input: $this,
+                    rawContent: $this.val()
+                }
+                if (overlay.rawContent) {
+                    overlay.json = $.parseJSON(overlay.rawContent);
+                }
+                data.overlays.push(overlay);
+            });
         }
         return data;
     };
 
-    var getOption = function(index, $elem, opts) {
-        var o = bootmap.options[index];
-        var value, v, skip = false;
-        if (opts && undefined !== opts[index]) {
-            value = opts[index];
-        } else {
-            value = data($elem, index, o.defaultValue);
-        }
-        switch (o.type) {
-            case "int":
-                v = parseInt(value, 10);
-                skip = isNaN(v);
-                break;
-            case "float":
-                v = parseFloat(value);
-                skip = isNaN(v);
-                break;
-            case "json":
-                v = $.parseJSON(value);
-                break;
-            default:
-                v = value;
-        }
-        if (skip) {
-            v = o.defaultValue;
-        }
-        return v;
-    };
-
-    var getOptions = function($elem, opts) {
-        var center, options = {};
-        $.each(bootmap.options, function(index, value) {
-            options[index] = getOption(index, $elem, opts);
-        });
-        if (!$.isArray(options.overlays)) {
-            if (options.overlays) {
-                options.overlays = [ options.overlays ];
-            } else {
-                options.overlays = [];
-            }
-        }
-        center = new google.maps.LatLng(options.lat, options.lng);
-        options.autoZoom = options.overlays.length && !options.zoom;
-        options.zoom = options.zoom ? options.zoom : bootmap.defaultZoom;
-        options.mapOptions = {
-            center: center,
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            zoom: options.zoom
-        }
-        if (options.markCenter) {
-            options.overlays.push({
-                "type": "Point",
-                "coordinates": [ center.lng(), center.lat() ]
-            });
-        }
-        return options;
-    };
-
-    var getPathFromOverlay = function(overlay) {
-        var paths;
-        if (overlay.getPath) {
-            paths = overlay.getPath().getArray();
-        } else if (overlay.getPosition) {
-            paths = [ overlay.getPosition() ];
-        }
-        return paths;
-    };
-
-    var getBoundsFromOverlay = function(overlay) {
-        var bounds = new google.maps.LatLngBounds();
-        var path = getPathFromOverlay(overlay);
-        var j;
-        for (j=0; j < path.length; j++) {
-            bounds.extend(path[j]);
-        }
-        return bounds;
-    };
-
     var createPath = function(coordinates) {
         var path = [];
-        var length = coordinates.length;
-        for (var i=0; i < length; i++) {
-            var coord = coordinates[i];
-            path.push(new google.maps.LatLng(coord[1], coord[0]));
+        for (var i=0; i < coordinates.length; i++) {
+            path.push(new google.maps.LatLng(
+                coordinates[i][1],
+                coordinates[i][0]
+            ));
         }
         return path;
     };
 
     var createPaths = function(coordinates) {
         var paths = [];
-        var length = coordinates.length;
-        for (var i=0; i < length; i++) {
+        for (var i=0; i < coordinates.length; i++) {
             paths.push(createPath(coordinates[i]));
         }
         return paths;
     };
 
-    var createOverlay = function(geoJSON) {
-        var feature = null;
+    var overlayType = function(overlay) {
+        if (overlay instanceof google.maps.Marker) {
+            return "Point";
+        }
+        if (overlay instanceof google.maps.Polyline) {
+            return "LineString";
+        }
+        if (overlay instanceof google.maps.Polygon) {
+            return "Polygon";
+        }
+        return null;
+    };
+
+    var overlayToJSON = function(overlay) {
+        var type = overlayType(overlay);
+        var path, paths = getPathsFromOverlay(overlay);
+        var i, j, coord, coordinates = [];
+        for (i=0; i < paths.length; i++) {
+            path = paths[i];
+            coordinates[i] = [];
+            for (j=0; j < path.length; j++) {
+                coord = path[j];
+                coordinates[i][j] = [ coord.lng(), coord.lat() ]
+            }
+        }
+        switch (type) {
+            case "Point":
+                coordinates = coordinates[0][0];
+                break;
+            case "LineString":
+                coordinates = coordinates[0];
+                break;
+            case "Polygon":
+                // fine
+                break;
+            default:
+                coordinates = [];
+        }
+        return {
+            type: type,
+            coordinates: coordinates
+        };
+    };
+
+    var onOverlayChange = function(overlay) {
+        var json = overlayToJSON(overlay);
+        overlay.overlayData.$input.filter(":input").val(printJSON(json));
+    };
+
+    var printJSON = function(json) {
+        var i, temp = [];
+        if ($.isArray(json)) {
+            for(i = 0; i < json.length; i++) {
+                temp.push(printJSON(json[i]));
+            }
+            return '[ ' + temp.join(', ') + ' ]';
+        }
+        if (typeof(json) === 'object') {
+            $.each(json, function(index, value) {
+                temp.push('"' + index + '": ' + printJSON(value));
+            });
+            return '{ ' + temp.join(', ') + ' }';
+        }
+        if (typeof(json) === 'string') {
+            return '"' +json + '"';
+        }
+        return '' + json;
+    };
+
+    var addListenersToPolygon = function(overlay) {
+        var callback = function() { onOverlayChange(overlay); };
+        var i, path, paths = overlay.getPaths();
+        for (i=0; i < paths.getLength(); i++) {
+            path = paths.getAt(i);
+            google.maps.event.addListener(path, 'insert_at', callback);
+            google.maps.event.addListener(path, 'remove_at', callback);
+            google.maps.event.addListener(path, 'set_at', callback);
+        }
+    };
+
+    var addListenersToPolyline = function(overlay) {
+        var callback = function() { onOverlayChange(overlay); };
+        var path = overlay.getPath;
+        google.maps.event.addListener(path, 'insert_at', callback);
+        google.maps.event.addListener(path, 'remove_at', callback);
+        google.maps.event.addListener(path, 'set_at', callback);
+    };
+
+    var createOverlay = function(overlayData) {
+        var json = overlayData.json;
         var overlay = null;
         var overlayOptions = {
             strokeWeight: 3,
-             fillColor: '#55FF55',
-             fillOpacity: 0.5,
-             editable: true
+            fillColor: '#55FF55',
+            fillOpacity: 0.5,
+            editable: true
         };
-        if (geoJSON.type === 'Feature') {
-            feature = geoJSON;
-            geoJSON = geoJSON.geometry;
-        }
-        if (feature) {
-            overlayOptions.title = feature.id;
-        }
-        switch(geoJSON.type) {
+        switch(json.type) {
             case 'Point':
-                overlayOptions.position = new google.maps.LatLng(geoJSON.coordinates[1], geoJSON.coordinates[0]);
+                overlayOptions.position = new google.maps.LatLng(json.coordinates[1], json.coordinates[0]);
                 overlay = new google.maps.Marker(overlayOptions);
                 break;
             case 'LineString':
-                overlayOptions.path = createPath(geoJSON.coordinates);
+                overlayOptions.path = createPath(json.coordinates);
                 overlay = new google.maps.Polyline(overlayOptions);
+                addListenersToPolyline(overlay);
                 break;
             case 'Polygon':
-                overlayOptions.paths = createPaths(geoJSON.coordinates);
+                overlayOptions.paths = createPaths(json.coordinates);
                 overlay = new google.maps.Polygon(overlayOptions);
+                addListenersToPolygon(overlay);
                 break;
         }
         if (overlay) {
-            overlay.bootmap = {
-                feature: feature,
-                geoJSON: geoJSON
-            }
+            overlay.overlayData = overlayData;
         }
         return overlay;
     };
+    
+    var createMap = function(elem, mapData) {
+        var center = new google.maps.LatLng(mapData.lat, mapData.lng);
+        return new google.maps.Map(elem, {
+            center: center,
+            zoom: 8,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        });
+    };
 
-    var getOverlays = function(options) {
-        var geoJSON, overlay, i;
-        var overlays = [];
-        for (i=0; i < options.overlays.length; i++) {
-            overlay = createOverlay(options.overlays[i]);
-            if (overlay) {
-                overlays.push(overlay);
+    var getPathsFromOverlay = function(overlay) {
+        var paths, p;
+        if (overlay.getPaths) {
+            p = overlay.getPaths();
+            paths = [];
+            for (var i =0; i < p.getLength(); i++) {
+                paths.push(p.getAt(i).getArray())
+            }
+        } else if (overlay.getPath) {
+            paths = [ overlay.getPath().getArray() ];
+        } else if (overlay.getPosition) {
+            paths = [ [ overlay.getPosition() ] ];
+        }
+        return paths;
+    };
+
+    var getBoundsFromOverlay = function(overlay) {
+        var bounds = new google.maps.LatLngBounds();
+        var path, paths = getPathsFromOverlay(overlay);
+        var i, j;
+        for (i=0; i < paths.length; i++) {
+            path = paths[i];
+            for (j=0; j < path.length; j++) {
+                bounds.extend(path[j]);
             }
         }
-        return overlays;
+        return bounds;
     };
 
     bootmap.init = function(elem, options) {
+        var i, overlay, bounds;
         var $elem = $(elem);
-        var map, overlays, i, bounds, mapBounds, union;
-        var fit;
-        options = getOptions($elem, options);
-        fit = options.autoZoom;
-        map = new google.maps.Map(elem, options.mapOptions);
-        overlays = getOverlays(options);
-        if (overlays.length) {
+        var mapData = getMapData($elem, options);
+        var map = createMap(elem, mapData);
+        if (mapData.overlays.length) {
             bounds = new google.maps.LatLngBounds();
-            for (i=0; i < overlays.length; i++) {
-                bounds.union(getBoundsFromOverlay(overlays[i]));
-                overlays[i].setMap(map);
+            for (i=0; i < mapData.overlays.length; i++) {
+                overlay = createOverlay(mapData.overlays[i]);
+                overlay.setMap(map);
+                bounds.union(getBoundsFromOverlay(overlay));
             }
-            mapBounds = map.getBounds();
-            if (mapBounds) {
-                union = new google.maps.LatLngBounds(mapBounds.getSouthWest(), mapBounds.getNorthEast());
-                union.union(bounds);
-                if (union.equals(mapBounds)) {
-                    map.panToBounds(bounds);
-                    fit = false;
-                }
-            }
-            if (fit) {
-                map.fitBounds(bounds);
-            }
+            map.fitBounds(bounds);
         }
+        $elem.data({
+            map: map,
+            mapData: mapData
+        });
     };
 
     $.fn.bootmap = function(options) {
+        options = $.extend({}, $.fn.options, options);
         return this.each(function () {
-            return bootmap.init(this, options);
+            bootmap.init(this, options);
         });
     };
 
@@ -238,7 +274,5 @@
     $(function () {
         $("[data-map]").bootmap();
     });
-
-    window.bootmap = bootmap;
 
 })(jQuery);

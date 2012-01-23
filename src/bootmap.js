@@ -45,7 +45,8 @@
                 input: $elem[0],
                 $input: $elem,
                 rawContent: html,
-                json: $.parseJSON(html)
+                json: $.parseJSON(html),
+                editable: false
             });
         }
         if (data.input) {
@@ -54,7 +55,8 @@
                 var overlay = {
                     input: this,
                     $input: $this,
-                    rawContent: $this.val()
+                    rawContent: $this.val(),
+                    editable: $this.filter(":input").length > 0
                 }
                 if (overlay.rawContent) {
                     overlay.json = $.parseJSON(overlay.rawContent);
@@ -179,7 +181,8 @@
             strokeWeight: 3,
             fillColor: '#55FF55',
             fillOpacity: 0.5,
-            editable: true
+            editable: overlayData.editable
+
         };
         switch(json.type) {
             case 'Point':

@@ -188,6 +188,12 @@
             case 'Point':
                 overlayOptions.position = new google.maps.LatLng(json.coordinates[1], json.coordinates[0]);
                 overlay = new google.maps.Marker(overlayOptions);
+                if (overlayOptions.editable) {
+                    overlay.setDraggable(true);
+                    google.maps.event.addListener(overlay, 'dragend', function() {
+                        onOverlayChange(overlay);
+                    });
+                }
                 break;
             case 'LineString':
                 overlayOptions.path = createPath(json.coordinates);

@@ -255,6 +255,7 @@
         var $elem = $(elem);
         var mapData = getMapData($elem, options);
         var map = createMap(elem, mapData);
+        /*
         var drawingManager = new google.maps.drawing.DrawingManager({
             drawingMode: google.maps.drawing.OverlayType.POLYGON,
             markerOptions: {
@@ -265,6 +266,7 @@
             },
             map: map
         });
+        */
         if (mapData.overlays.length) {
             bounds = new google.maps.LatLngBounds();
             for (i=0; i < mapData.overlays.length; i++) {

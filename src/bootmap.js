@@ -250,11 +250,21 @@
         return bounds;
     };
 
-    bootmap.init = function(elem, options) {
+    bootmap.initElem = function(elem, options) {
         var i, overlay, bounds;
         var $elem = $(elem);
         var mapData = getMapData($elem, options);
         var map = createMap(elem, mapData);
+        var drawingManager = new google.maps.drawing.DrawingManager({
+            drawingMode: google.maps.drawing.OverlayType.POLYGON,
+            markerOptions: {
+                draggable: true
+            },
+            polylineOptions: {
+                editable: true
+            },
+            map: map
+        });
         if (mapData.overlays.length) {
             bounds = new google.maps.LatLngBounds();
             for (i=0; i < mapData.overlays.length; i++) {
@@ -270,18 +280,32 @@
         });
     };
 
+    bootmap.googleMapsLoaded = function() {
+        return typeof(google) !== 'undefined' && typeof(google.maps) !== 'undefined' && typeof(google.maps.drawing) !== 'undefined';
+    }
+
+    bootmap.init = function() {
+        $("[data-map]").bootmap();
+    }
+
     $.fn.bootmap = function(options) {
         options = $.extend({}, $.fn.options, options);
         return this.each(function () {
-            bootmap.init(this, options);
+            bootmap.initElem(this, options);
         });
     };
 
     $.fn.bootmap.defaults = {
     };
 
+    window.bootmap = bootmap;
+
     $(function () {
-        $("[data-map]").bootmap();
+        if (bootmap.googleMapsLoaded()) {
+            bootmap.init();
+        } else {
+            $("body").append('<script src="//maps.googleapis.com/maps/api/js?libraries=drawing&sensor=false&callback=bootmap.init"></script>');
+        }
     });
 
 })(jQuery);

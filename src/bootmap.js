@@ -178,12 +178,15 @@
         var json = overlayData.json;
         var overlay = null;
         var overlayOptions = {
-            strokeWeight: 3,
-            fillColor: '#55FF55',
-            fillOpacity: 0.5,
             editable: overlayData.editable
-
         };
+        if (json.type === "GeometryCollection") {
+            if (json.geometries.length === 1) {
+                json = json.geometries[0];
+            } else {
+                throw "Bootmap can only handle GeometryCollections of length 1";
+            }
+        }
         switch(json.type) {
             case 'Point':
                 overlayOptions.position = new google.maps.LatLng(json.coordinates[1], json.coordinates[0]);
@@ -205,6 +208,8 @@
                 overlay = new google.maps.Polygon(overlayOptions);
                 addListenersToPolygon(overlay);
                 break;
+            default:
+                throw "Bootmap cannot handle geometries of type '" + json.type + "'";
         }
         if (overlay) {
             overlay.overlayData = overlayData;

@@ -11,6 +11,93 @@
         }
     };
 
+    var regexRemoveExtraWhitespace = new RegExp(/\s+/g);
+
+    var tidyWKT = function(wkt) {
+        return $.trim(wkt.replace(regexRemoveExtraWhitespace, " ")).replace(") ,", "),");
+    };
+
+    var wktPaths = function(paths) {
+        return _wktPaths(tidyWKT(paths));
+    };
+
+    var _wktPaths = function(paths) {
+        var result = []
+        var i, r, len, p, x, y;
+        paths = $.trim(paths);
+        if (paths[0] === "(") {
+            len = paths.length;
+            paths = paths.substr(1, len - 2);
+            paths = paths.split("),");
+            for (i = 0; i < paths.length; i++) {
+                p = paths[i];
+                if (i > 0) {
+                    p = $.trim(p);
+                    if (p[0] !== "(") {
+                        return null;
+                    }
+                    p = p.substr(1);
+                }
+                result[i] = _wktPaths(p);
+            }
+        } else {
+            paths = paths.split(",");
+            for (i = 0; i < paths.length; i++) {
+                p = $.trim(paths[i]).split(" ");
+                x = parseFloat(p[0]);
+                y = parseFloat(p[1]);
+                if (isNaN(x) || isNaN(y)) {
+                    return null;
+                }
+                result[i] = [x, y];
+            }
+        }
+        return result;
+    };
+
+    var readWKT = function(wkt) {
+        var type, pathsText, len, paths, pos = wkt.indexOf("(");
+        if (pos === -1) {
+            throw "Invalid WKT, format not recognized";
+        }
+        type = $.trim(wkt.substr(0, pos)).toUpperCase();
+        if (!type) {
+            throw "Invalid WKT, no type specified";
+        }
+        pathsText = $.trim(wkt.substr(pos));
+        len = pathsText.length;
+        if (pathsText[0] !== "(" || pathsText[len - 1] !== ")") {
+            throw "Invalid WKT, path not in brackets";
+        }
+        paths = wktPaths(pathsText.substr(1, len -2));
+        if (paths === null) {
+            throw "Invalid WKT, cannot parse path " + pathsText;
+        }
+        switch (type) {
+            case "POINT":
+                if (paths.length !== 1) {
+                    throw "Invalid WKT, type POINT should have 1 coordinate";
+                }
+                type = "Point";
+                paths = paths[0];
+                break;
+            case "LINESTRING":
+                type = "LineString";
+                // paths = paths;
+                break;
+            case "POLYGON":
+                type = "Polygon";
+                // paths = paths;
+                break;
+            default:
+                throw "Invalid WKT, unknown type " + type;
+        }
+        return {
+            type: type,
+            coordinates: paths
+        }
+    };
+
     var getData = function($elem, index) {
         return $elem.attr('data-' + index);
     };
@@ -45,26 +132,42 @@
                 input: $elem[0],
                 $input: $elem,
                 rawContent: html,
-                json: $.parseJSON(html),
+                type: data.type,
+                json: parseRawContent(html, data.type),
                 editable: false
             });
         }
         if (data.input) {
             $(data.input).each(function() {
                 var $this = $(this);
+                var rawContent = $this.val();
+                var type = getData($this, "type");
                 var overlay = {
                     input: this,
                     $input: $this,
-                    rawContent: $this.val(),
+                    rawContent: rawContent,
+                    type: type,
+                    json: parseRawContent(rawContent, type),
                     editable: $this.filter(":input").length > 0
-                }
-                if (overlay.rawContent) {
-                    overlay.json = $.parseJSON(overlay.rawContent);
                 }
                 data.overlays.push(overlay);
             });
         }
+        delete data.type;
         return data;
+    };
+
+    var parseRawContent = function(rawContent, type) {
+        var json;
+        switch (type.toLowerCase()) {
+            case "wkt":
+                json = readWKT(rawContent);
+                break
+            case "json":
+                json = $.parseJSON(rawContent);
+                break;
+        }
+        return json;
     };
 
     var createPath = function(coordinates) {
@@ -132,7 +235,33 @@
 
     var onOverlayChange = function(overlay) {
         var json = overlayToJSON(overlay);
-        overlay.overlayData.$input.filter(":input").val(printJSON(json));
+        var output;
+        switch (overlay.overlayData.type) {
+            case "wkt":
+                output = printWKT(json);
+                break;
+            case "json":
+                output = printJSON(json);
+                break;
+            default:
+                throw "Invalid output format " + type;
+        }
+        overlay.overlayData.$input.filter(":input").val(output);
+    };
+
+    var coordinatesToWKT = function(coordinates) {
+        if (!$.isArray(coordinates[0])) {
+            return coordinates[0] + " " + coordinates[1];
+        }
+        var result = [];
+        for (var i = 0; i < coordinates.length; i++) {
+            result[i] = coordinatesToWKT(coordinates[i]);
+        }
+        return "(" + result.join(",") + ")";
+    };
+
+    var printWKT = function(json) {
+        return json.type.toUpperCase() + coordinatesToWKT(json.coordinates);
     };
 
     var printJSON = function(json) {

@@ -16,20 +16,24 @@
 
     <hr>
 
+    <div id="map0" data-map="map" data-type="wkt" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
+        Polygon ((4 40, 5 40, 5 45, 4                    45, 4 40)    ,    ( 4.2 41  , 4.8 44,4.8 41, 4.2   41 ))
+    </div>
+
     <div id="map1" data-map="map" data-type="json" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
         { "type": "Polygon", "coordinates": [ [ [4, 40], [5, 40], [5, 45], [4, 45], [4, 40] ], [ [4.2, 41], [4.8, 44], [4.8, 41], [4.2, 41] ] ] }
     </div>
 
     <div id="map2" data-map="map" data-type="json" data-input="#map2_data" style="width: 400px; height: 300px"></div>
 
-    <textarea id="map2_data">
+    <textarea id="map2_data" data-type="json">
         { "type": "GeometryCollection", "geometries": [ { "type": "Point", "coordinates": [ 4, 40 ] } ] }
     </textarea>
 
-    <div id="map3" data-map="map" data-type="json" data-input="#map3_data" style="width: 400px; height: 300px"></div>
+    <div id="map3" data-map="map" data-input="#map3_data" style="width: 400px; height: 300px"></div>
 
-    <textarea id="map3_data">
-        { "type": "Polygon", "coordinates": [ [ [4, 40], [5, 40], [5, 45], [4, 45], [4, 40] ], [ [4.2, 41], [4.8, 44], [4.8, 41], [4.2, 41] ] ] }
+    <textarea id="map3_data" data-type="wkt">
+        Polygon ((4 40, 5 40, 5 45, 4                    45, 4 40)    ,    ( 4.2 41  , 4.8 44,4.8 41, 4.2   41 ))
     </textarea>
 
 </body>

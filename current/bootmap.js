@@ -6,7 +6,6 @@
             lat: { type: "float" },
             lng: { type: "float" },
             zoom: { type: "int", value: 8 },
-            type: { type: "string" },
             input: { }
         }
     };
@@ -22,7 +21,7 @@
     };
 
     var _wktPaths = function(paths) {
-        var result = []
+        var result = [];
         var i, r, len, p, x, y;
         paths = $.trim(paths);
         if (paths[0] === "(") {
@@ -95,16 +94,33 @@
         return {
             type: type,
             coordinates: paths
-        }
+        };
     };
 
     var getData = function($elem, index) {
         return $elem.attr('data-' + index);
     };
 
+    var parseGeom = function(input) {
+        var $input = $(input);
+        var editable = $input.filter(":input").length > 0;
+        var rawContent = editable ? $input.val() : $input.html();
+        var type = getData($input, "type");
+        if (type && rawContent) {
+            return {
+                input: input,
+                $input: $input,
+                rawContent: rawContent,
+                type: type,
+                geom: parseRawContent(rawContent, type),
+                editable: editable
+            };
+        }
+        return null;
+    };
+
     var getMapData = function($elem, options) {
-        var data = {};
-        var html = $.trim($elem.html());
+        var overlay, data = {};
         $.each(bootmap.options, function(index, option) {
             var value = options[index];
             if (undefined === value) {
@@ -127,30 +143,16 @@
             data[index] = value;
         });
         data.overlays = [];
-        if (html) {
-            data.overlays.push({
-                input: $elem[0],
-                $input: $elem,
-                rawContent: html,
-                type: data.type,
-                json: parseRawContent(html, data.type),
-                editable: false
-            });
+        overlay = parseGeom($elem[0]);
+        if (overlay) {
+            data.overlays.push(overlay);
         }
         if (data.input) {
             $(data.input).each(function() {
-                var $this = $(this);
-                var rawContent = $this.val();
-                var type = getData($this, "type");
-                var overlay = {
-                    input: this,
-                    $input: $this,
-                    rawContent: rawContent,
-                    type: type,
-                    json: parseRawContent(rawContent, type),
-                    editable: $this.filter(":input").length > 0
+                overlay = parseGeom(this);
+                if (overlay) {
+                    data.overlays.push(overlay);
                 }
-                data.overlays.push(overlay);
             });
         }
         delete data.type;
@@ -158,16 +160,19 @@
     };
 
     var parseRawContent = function(rawContent, type) {
-        var json;
+        var geom;
         switch (type.toLowerCase()) {
             case "wkt":
-                json = readWKT(rawContent);
-                break
+                geom = readWKT(rawContent);
+                break;
             case "json":
-                json = $.parseJSON(rawContent);
+                geom = $.parseJSON(rawContent);
+                break;
+            default:
+                geom = null;
                 break;
         }
-        return json;
+        return geom;
     };
 
     var createPath = function(coordinates) {
@@ -202,7 +207,7 @@
         return null;
     };
 
-    var overlayToJSON = function(overlay) {
+    var overlayToGeom = function(overlay) {
         var type = overlayType(overlay);
         var path, paths = getPathsFromOverlay(overlay);
         var i, j, coord, coordinates = [];
@@ -211,7 +216,7 @@
             coordinates[i] = [];
             for (j=0; j < path.length; j++) {
                 coord = path[j];
-                coordinates[i][j] = [ coord.lng(), coord.lat() ]
+                coordinates[i][j] = [ coord.lng(), coord.lat() ];
             }
         }
         switch (type) {
@@ -234,17 +239,18 @@
     };
 
     var onOverlayChange = function(overlay) {
-        var json = overlayToJSON(overlay);
+        var geom = overlayToGeom(overlay);
+        var type = overlay.overlayData.type;
         var output;
-        switch (overlay.overlayData.type) {
+        switch (type) {
             case "wkt":
-                output = printWKT(json);
+                output = printWKT(geom);
                 break;
-            case "json":
-                output = printJSON(json);
+            case "geom":
+                output = printJSON(geom);
                 break;
             default:
-                throw "Invalid output format " + type;
+                throw "No output support for type " + type;
         }
         overlay.overlayData.$input.filter(":input").val(output);
     };
@@ -260,28 +266,28 @@
         return "(" + result.join(",") + ")";
     };
 
-    var printWKT = function(json) {
-        return json.type.toUpperCase() + coordinatesToWKT(json.coordinates);
+    var printWKT = function(geom) {
+        return geom.type.toUpperCase() + coordinatesToWKT(geom.coordinates);
     };
 
-    var printJSON = function(json) {
+    var printJSON = function(geom) {
         var i, temp = [];
-        if ($.isArray(json)) {
-            for(i = 0; i < json.length; i++) {
-                temp.push(printJSON(json[i]));
+        if ($.isArray(geom)) {
+            for(i = 0; i < geom.length; i++) {
+                temp.push(printJSON(geom[i]));
             }
             return '[ ' + temp.join(', ') + ' ]';
         }
-        if (typeof(json) === 'object') {
-            $.each(json, function(index, value) {
+        if (typeof(geom) === 'object') {
+            $.each(geom, function(index, value) {
                 temp.push('"' + index + '": ' + printJSON(value));
             });
             return '{ ' + temp.join(', ') + ' }';
         }
-        if (typeof(json) === 'string') {
-            return '"' +json + '"';
+        if (typeof(geom) === 'string') {
+            return '"' +geom + '"';
         }
-        return '' + json;
+        return '' + geom;
     };
 
     var addListenersToPolygon = function(overlay) {
@@ -304,41 +310,45 @@
     };
 
     var createOverlay = function(overlayData) {
-        var json = overlayData.json;
+        var geom;
         var overlay = null;
-        var overlayOptions = {
-            editable: overlayData.editable
-        };
-        if (json.type === "GeometryCollection") {
-            if (json.geometries.length === 1) {
-                json = json.geometries[0];
-            } else {
-                throw "Bootmap can only handle GeometryCollections of length 1";
-            }
-        }
-        switch(json.type) {
-            case 'Point':
-                overlayOptions.position = new google.maps.LatLng(json.coordinates[1], json.coordinates[0]);
-                overlay = new google.maps.Marker(overlayOptions);
-                if (overlayOptions.editable) {
-                    overlay.setDraggable(true);
-                    google.maps.event.addListener(overlay, 'dragend', function() {
-                        onOverlayChange(overlay);
-                    });
+        var overlayOptions = {};
+        if (overlayData.type === "wkt-file") {
+            overlay = new google.maps.KmlLayer(overlayData.rawContent);
+        } else {
+            geom = overlayData.geom;
+            overlayOptions.editable = overlayData.editable;
+            if (geom.type === "GeometryCollection") {
+                if (geom.geometries.length === 1) {
+                    geom = geom.geometries[0];
+                } else {
+                    throw "Bootmap can only handle GeometryCollections of length 1";
                 }
-                break;
-            case 'LineString':
-                overlayOptions.path = createPath(json.coordinates);
-                overlay = new google.maps.Polyline(overlayOptions);
-                addListenersToPolyline(overlay);
-                break;
-            case 'Polygon':
-                overlayOptions.paths = createPaths(json.coordinates);
-                overlay = new google.maps.Polygon(overlayOptions);
-                addListenersToPolygon(overlay);
-                break;
-            default:
-                throw "Bootmap cannot handle geometries of type '" + json.type + "'";
+            }
+            switch(geom.type) {
+                case 'Point':
+                    overlayOptions.position = new google.maps.LatLng(geom.coordinates[1], geom.coordinates[0]);
+                    overlay = new google.maps.Marker(overlayOptions);
+                    if (overlayOptions.editable) {
+                        overlay.setDraggable(true);
+                        google.maps.event.addListener(overlay, 'dragend', function() {
+                            onOverlayChange(overlay);
+                        });
+                    }
+                    break;
+                case 'LineString':
+                    overlayOptions.path = createPath(geom.coordinates);
+                    overlay = new google.maps.Polyline(overlayOptions);
+                    addListenersToPolyline(overlay);
+                    break;
+                case 'Polygon':
+                    overlayOptions.paths = createPaths(geom.coordinates);
+                    overlay = new google.maps.Polygon(overlayOptions);
+                    addListenersToPolygon(overlay);
+                    break;
+                default:
+                    throw "Bootmap cannot handle geometries of type '" + geom.type + "'";
+            }
         }
         if (overlay) {
             overlay.overlayData = overlayData;
@@ -361,7 +371,7 @@
             p = overlay.getPaths();
             paths = [];
             for (var i =0; i < p.getLength(); i++) {
-                paths.push(p.getAt(i).getArray())
+                paths.push(p.getAt(i).getArray());
             }
         } else if (overlay.getPath) {
             paths = [ overlay.getPath().getArray() ];
@@ -375,10 +385,12 @@
         var bounds = new google.maps.LatLngBounds();
         var path, paths = getPathsFromOverlay(overlay);
         var i, j;
-        for (i=0; i < paths.length; i++) {
-            path = paths[i];
-            for (j=0; j < path.length; j++) {
-                bounds.extend(path[j]);
+        if (paths) {
+            for (i=0; i < paths.length; i++) {
+                path = paths[i];
+                for (j=0; j < path.length; j++) {
+                    bounds.extend(path[j]);
+                }
             }
         }
         return bounds;
@@ -418,11 +430,11 @@
 
     bootmap.googleMapsLoaded = function() {
         return typeof(google) !== 'undefined' && typeof(google.maps) !== 'undefined' && typeof(google.maps.drawing) !== 'undefined';
-    }
+    };
 
     bootmap.init = function() {
         $("[data-map]").bootmap();
-    }
+    };
 
     $.fn.bootmap = function(options) {
         options = $.extend({}, $.fn.options, options);

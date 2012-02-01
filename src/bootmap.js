@@ -10,48 +10,22 @@
         }
     };
 
-    var regexRemoveExtraWhitespace = new RegExp(/\s+/g);
-
-    var tidyWKT = function(wkt) {
-        return $.trim(wkt.replace(regexRemoveExtraWhitespace, " ")).replace(") ,", "),");
-    };
-
-    var wktPaths = function(paths) {
-        return _wktPaths(tidyWKT(paths));
-    };
-
-    var _wktPaths = function(paths) {
-        var result = [];
-        var i, r, len, p, x, y;
-        paths = $.trim(paths);
-        if (paths[0] === "(") {
-            len = paths.length;
-            paths = paths.substr(1, len - 2);
-            paths = paths.split("),");
-            for (i = 0; i < paths.length; i++) {
-                p = paths[i];
-                if (i > 0) {
-                    p = $.trim(p);
-                    if (p[0] !== "(") {
-                        return null;
-                    }
-                    p = p.substr(1);
-                }
-                result[i] = _wktPaths(p);
-            }
-        } else {
-            paths = paths.split(",");
-            for (i = 0; i < paths.length; i++) {
-                p = $.trim(paths[i]).split(" ");
-                x = parseFloat(p[0]);
-                y = parseFloat(p[1]);
-                if (isNaN(x) || isNaN(y)) {
-                    return null;
-                }
-                result[i] = [x, y];
-            }
+    var wktPathsToArray = function(paths) {
+        paths = paths
+            .replace(/([\d\.])\s+([\d\.])/g, '$1#$2')
+            .replace(/\s/g, '')
+            .replace(/\(([\d\.])/g, '(($1')
+            .replace(/([\d\.])\)/g, '$1))')
+            .replace(/([\d\.])\,([\d\.])/g, '$1),($2')
+            .replace(/\#/g, ',')
+            .replace(/\)/g, ']')
+            .replace(/\(/g, '[');
+        try {
+            paths = $.parseJSON(paths);
+        } catch(e) {
+            paths = null;
         }
-        return result;
+        return paths;
     };
 
     var readWKT = function(wkt) {
@@ -68,7 +42,7 @@
         if (pathsText[0] !== "(" || pathsText[len - 1] !== ")") {
             throw "Invalid WKT, path not in brackets";
         }
-        paths = wktPaths(pathsText.substr(1, len -2));
+        paths = wktPathsToArray(pathsText);
         if (paths === null) {
             throw "Invalid WKT, cannot parse path " + pathsText;
         }
@@ -86,6 +60,10 @@
                 break;
             case "POLYGON":
                 type = "Polygon";
+                // paths = paths;
+                break;
+            case "MULTIPOLYGON":
+                type = "MultiPolygon";
                 // paths = paths;
                 break;
             default:

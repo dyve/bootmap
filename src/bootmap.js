@@ -442,25 +442,17 @@
 
     bootmap.initElem = function (elem, options) {
         var i, overlay, bounds;
+        var overlays = [];
         var $elem = $(elem);
         var mapData = parseMapElem($elem, options);
         var map = createMap(elem, mapData);
-        /*
-         var drawingManager = new google.maps.drawing.DrawingManager({
-         drawingMode: google.maps.drawing.OverlayType.POLYGON,
-         markerOptions: {
-         draggable: true
-         },
-         polylineOptions: {
-         editable: true
-         },
-         map: map
-         });
-         */
         if (mapData.overlays.length) {
             bounds = new google.maps.LatLngBounds();
             for (i = 0; i < mapData.overlays.length; i++) {
-                overlay = createOverlay(mapData.overlays[i]);
+                overlays.push(createOverlay(mapData.overlays[i]));
+            }
+            for (i = 0; i < overlays.length; i++) {
+                overlay = overlays[i];
                 overlay.setMap(map);
                 bounds.union(getBoundsFromOverlay(overlay));
             }

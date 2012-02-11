@@ -440,14 +440,25 @@
         return bounds;
     };
 
-    var createOverlaysFromLayers = function(overlayDataArray) {
-        var i, overlays = [];
-        for (i = 0; i < overlayDataArray.length; i++) {
-            overlays.push(createOverlayFromLayer(overlayDataArray[i]));
+    var createOverlaysFromLayer = function(layer) {
+        var overlays = createOverlayFromLayer(layer);
+        if (!$.isArray(overlays)) {
+            overlays = [ overlays ];
         }
         return overlays;
     };
-    
+
+    var createOverlaysFromLayers = function(layers) {
+        var i, j, o, overlays = [];
+        for (i = 0; i < layers.length; i++) {
+            o = createOverlaysFromLayer(layers[i]);
+            for (j = 0; j < o.length; j++) {
+                overlays.push(o[j]);
+            }
+        }
+        return overlays;
+    };
+
     bootmap.initElem = function (elem, options) {
         var i, overlay, overlays, bounds;
         var $elem = $(elem);

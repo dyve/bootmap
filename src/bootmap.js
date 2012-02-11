@@ -354,15 +354,15 @@
         google.maps.event.addListener(path, 'set_at', callback);
     };
 
-    var createOverlay = function(overlayData) {
+    var createOverlayFromLayer = function(layer) {
         var geom;
         var overlay = null;
         var overlayOptions = {};
-        if (overlayData.type === "wkt-file") {
-            overlay = new google.maps.KmlLayer(overlayData.text);
+        if (layer.type === "wkt-file") {
+            overlay = new google.maps.KmlLayer(layer.text);
         } else {
-            geom = overlayData.geom;
-            overlayOptions.editable = overlayData.editable;
+            geom = layer.geom;
+            overlayOptions.editable = layer.editable;
             if (geom.type === "GeometryCollection") {
                 if (geom.geometries.length === 1) {
                     geom = geom.geometries[0];
@@ -393,7 +393,7 @@
             }
         }
         if (overlay) {
-            overlay.overlayData = overlayData;
+            overlay.overlayData = layer;
         }
         return overlay;
     };
@@ -443,7 +443,7 @@
     var createOverlaysFromLayers = function(overlayDataArray) {
         var i, overlays = [];
         for (i = 0; i < overlayDataArray.length; i++) {
-            overlays.push(createOverlay(overlayDataArray[i]));
+            overlays.push(createOverlayFromLayer(overlayDataArray[i]));
         }
         return overlays;
     };

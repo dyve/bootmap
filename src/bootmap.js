@@ -170,7 +170,7 @@
         return $elem.attr('data-' + index);
     };
 
-    var parseOverlayElem = function (elem) {
+    var parseLayerElem = function (elem) {
         var $elem = $(elem);
         var editable = $elem.filter(":input").length > 0;
         var text = editable ? $elem.val() : $elem.html();
@@ -189,7 +189,7 @@
     };
 
     var parseMapElem = function ($elem, options) {
-        var overlay, data = {};
+        var layer, data = {};
         $.each(bootmap.mapParameters, function (index, option) {
             var value = options[index];
             if (undefined === value) {
@@ -211,16 +211,16 @@
             }
             data[index] = value;
         });
-        data.overlays = [];
-        overlay = parseOverlayElem($elem[0]);
-        if (overlay) {
-            data.overlays.push(overlay);
+        data.layers = [];
+        layer = parseLayerElem($elem[0]);
+        if (layer) {
+            data.layers.push(layer);
         }
         if (data.input) {
             $(data.input).each(function () {
-                overlay = parseOverlayElem(this);
-                if (overlay) {
-                    data.overlays.push(overlay);
+                layer = parseLayerElem(this);
+                if (layer) {
+                    data.layers.push(layer);
                 }
             });
         }
@@ -354,7 +354,7 @@
         google.maps.event.addListener(path, 'set_at', callback);
     };
 
-    var createOverlay = function (overlayData) {
+    var createOverlay = function(overlayData) {
         var geom;
         var overlay = null;
         var overlayOptions = {};
@@ -440,17 +440,22 @@
         return bounds;
     };
 
+    var createOverlaysFromLayers = function(overlayDataArray) {
+        var i, overlays = [];
+        for (i = 0; i < overlayDataArray.length; i++) {
+            overlays.push(createOverlay(overlayDataArray[i]));
+        }
+        return overlays;
+    };
+    
     bootmap.initElem = function (elem, options) {
-        var i, overlay, bounds;
-        var overlays = [];
+        var i, overlay, overlays, bounds;
         var $elem = $(elem);
         var mapData = parseMapElem($elem, options);
         var map = createMap(elem, mapData);
-        if (mapData.overlays.length) {
+        if (mapData.layers.length) {
             bounds = new google.maps.LatLngBounds();
-            for (i = 0; i < mapData.overlays.length; i++) {
-                overlays.push(createOverlay(mapData.overlays[i]));
-            }
+            overlays = createOverlaysFromLayers(mapData.layers);
             for (i = 0; i < overlays.length; i++) {
                 overlay = overlays[i];
                 overlay.setMap(map);

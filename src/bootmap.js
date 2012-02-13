@@ -2,16 +2,13 @@
     "use strict";
 
     var bootmap = {
-        BootMapError: function(message) {
-            this.message = message;
-        },
         mapParameters: {
             lat: { type:"float" },
             lng: { type:"float" },
             zoom: { type:"int", value:8 },
             input: { }
         },
-        overlayTypes: {
+        OverlayType: {
             POLYGON: "POLYGON",
             POLYLINE: "POLYLINE",
             MARKER: "MARKER"
@@ -27,8 +24,8 @@
                 return new google.maps.LatLng(lat, lng);
             }
         }
-        throw new bootmap.BootMapError("Invalid coordinate. Expected array with 2 floats, got " + printJSON(coordinates));
-    }
+        throw new Error("Invalid coordinate. Expected array with 2 floats, got " + printJSON(coordinates));
+    };
 
     var createPath = function (coordinates) {
         var i, path = [];
@@ -36,7 +33,7 @@
             path.push(createLatLng(coordinates[i]));
         }
         return path;
-    }
+    };
 
     var createPaths = function (coordinates) {
         var i, paths = [];
@@ -44,13 +41,42 @@
             paths.push(createPath(coordinates[i]));
         }
         return paths;
-    }
+    };
 
-    var createMarker = function (coordinates, options) {
+    var createOverlay = function(type, coordinates, options, geomIndex) {
+        var overlay;
+        switch (type) {
+            case bootmap.OverlayType.MARKER:
+                overlay = createMarker(coordinates, options);
+                break;
+            case bootmap.OverlayType.POLYLINE:
+                overlay = createPolyline(coordinates, options);
+                break;
+            case bootmap.OverlayType.POLYGON:
+                overlay = createPolygon(coordinates, options);
+                break;
+            default:
+                throw new Error("Ilegal overlay type: " + type);
+        }
+        overlay.geomIndex = geomIndex;
+        return overlay;
+    };
+
+    var createMarker = function (coordinates, options, geomIndex) {
+        var marker;
         var opts = $.extend({}, options);
+        var editable = opts.editable;
+        delete opts.editable;
         opts.position = createLatLng(coordinates);
-        return new google.maps.Marker(opts);
-    }
+        marker = new google.maps.Marker(opts);
+        if (editable) {
+            marker.setDraggable(true);
+            google.maps.event.addListener(marker, 'dragend', function () {
+                onOverlayChange(marker);
+            });
+        }
+        return marker;
+    };
 
     var createPolyline = function (coordinates, options) {
         var opts = $.extend({}, options);
@@ -94,7 +120,7 @@
         try {
             paths = $.parseJSON(paths);
         } catch (e) {
-            throw new bootmap.BootMapError("Cannot parse WKT path to coordinates array")
+            throw new Error("Cannot parse WKT path to coordinates array")
         }
         return paths;
     };
@@ -102,11 +128,11 @@
     var wktToGeom = function (wkt) {
         var type, pathsText, len, paths, pos = wkt.indexOf("(");
         if (pos === -1) {
-            throw new bootmap.BootMapError("Invalid WKT, format not recognized");
+            throw new Error("Invalid WKT, format not recognized");
         }
         type = $.trim(wkt.substr(0, pos)).toUpperCase();
         if (!type) {
-            throw new bootmap.BootMapError("Invalid WKT, no type specified");
+            throw new Error("Invalid WKT, no type specified");
         }
         pathsText = wkt.substr(pos);
         paths = wktPathsToCoordinates(pathsText);
@@ -229,13 +255,13 @@
 
     var overlayType = function (overlay) {
         if (overlay instanceof google.maps.Marker) {
-            return bootmap.overlayTypes.MARKER;
+            return bootmap.OverlayType.MARKER;
         }
         if (overlay instanceof google.maps.Polyline) {
-            return bootmap.overlayTypes.POLYLINE;
+            return bootmap.OverlayType.POLYLINE;
         }
         if (overlay instanceof google.maps.Polygon) {
-            return bootmap.overlayTypes.POLYGON;
+            return bootmap.OverlayType.POLYGON;
         }
         return null;
     };
@@ -262,17 +288,20 @@
         var type = overlayType(overlay);
         var coordinates = getCoordinatesFromOverlay(overlay);
         switch (type) {
-            case bootmap.overlayTypes.MARKER:
+            case bootmap.OverlayType.MARKER:
+                type = 'Point';
                 coordinates = coordinates[0][0];
                 break;
-            case bootmap.overlayTypes.POLYLINE:
+            case bootmap.OverlayType.POLYLINE:
+                type = 'LineString';
                 coordinates = coordinates[0];
                 break;
-            case  bootmap.overlayTypes.POLYGON:
-                // fine
+            case  bootmap.OverlayType.POLYGON:
+                type = 'Polygon';
+                // coords are fine
                 break;
             default:
-                coordinates = [];
+                throw new Error("Invalid overlay type: " + type);
         }
         return {
             type: type,
@@ -281,20 +310,26 @@
     };
 
     var onOverlayChange = function (overlay) {
-        var geom = overlayToGeom(overlay);
-        var type = overlay.overlayData.type;
+        var newGeom = overlayToGeom(overlay);
+        var geomIndex = overlay.geomIndex;
+        if (geomIndex === '0') {
+            overlay.layer.geom = newGeom;
+        } else {
+            throw new Error("This is not possible yet, sorry");
+        }
+        var type = overlay.layer.type;
         var output;
         switch (type) {
             case "wkt":
-                output = printWKT(geom);
+                output = printWKT(overlay.layer.geom);
                 break;
-            case "geom":
-                output = printJSON(geom);
+            case "json":
+                output = printJSON(overlay.layer.geom);
                 break;
             default:
                 throw "No output support for type " + type;
         }
-        overlay.overlayData.$elem.filter(":input").val(output);
+        overlay.layer.$elem.filter(":input").val(output);
     };
 
     var coordinatesToWKT = function (coordinates) {
@@ -361,54 +396,52 @@
      * @param overlayOptions
      * @return array
      */
-    var createOverlaysFromGeom = function(geom, overlayOptions) {
-        var i, result;
-        overlayOptions = overlayOptions || {};
+    var createOverlaysFromGeom = function(geom, overlayOptions, geomIndex) {
+        var i, result, newIndex;
+        if (!geomIndex) {
+            geomIndex = '0';
+        }
         if (geom.type === "GeometryCollection") {
             result = [];
             for (i = 0; i < geom.geometries.length; i++) {
-                result.push(createOverlaysFromGeom(geom.geometries[i]));
+                newIndex = geomIndex + ',' + i;
+                result.push(createOverlaysFromGeom(geom.geometries[i], overlayOptions, newIndex));
             }
         } else {
             var multiGeom = function(type, coordinates) {
                 var overlays = [];
                 for (i = 0; i < geom.coordinates.length; i++) {
+                    newIndex = geomIndex + ',' + i;
                     overlays.push(createOverlaysFromGeom({
                         type: type,
                         coordinates: geom.coordinates[i]
-                    }, overlayOptions));
+                    }, overlayOptions, newIndex));
                 }
                 return overlays;
             };
             switch (geom.type) {
                 case 'Point':
-                    result = createMarker(geom.coordinates, overlayOptions);
-                    if (overlayOptions.editable) {
-                        result.setDraggable(true);
-                        google.maps.event.addListener(result, 'dragend', function () {
-                            onOverlayChange(result);
-                        });
-                    }
+                    result = createOverlay(bootmap.OverlayType.MARKER, geom.coordinates, overlayOptions, geomIndex);
+                    break;
+                case 'LineString':
+                    result = createOverlay(bootmap.OverlayType.POLYLINE, geom.coordinates, overlayOptions, geomIndex);
+                    addListenersToPolyline(result);
+                    break;
+                case 'Polygon':
+                    result = createOverlay(bootmap.OverlayType.POLYGON, geom.coordinates, overlayOptions, geomIndex);
+                    addListenersToPolygon(result);
                     break;
                 case 'MultiPoint':
                     result = multiGeom('Point', geom.coordinates);
                     break;
-                case 'LineString':
-                    result = createPolyline(geom.coordinates, overlayOptions);
-                    addListenersToPolyline(result);
-                    break;
                 case 'MultiLineString':
                     result = multiGeom('LineString', geom.coordinates);
-                    break;
-                case 'Polygon':
-                    result = createPolygon(geom.coordinates, overlayOptions);
-                    addListenersToPolygon(result);
                     break;
                 case 'MultiPolygon':
                     result = multiGeom('Polygon', geom.coordinates);
                     break;
                 default:
-                    throw "Bootmap cannot handle geometries of type '" + geom.type + "'";
+                    throw Error("Bootmap cannot handle geometries of type '" + geom.type + "'");
             }
         }
         return result;
@@ -431,7 +464,9 @@
 
     var createOverlaysFromLayer = function(layer) {
         var i, overlays = null;
-        var overlayOptions = {};
+        var overlayOptions = {
+            editable: layer.editable
+        };
         if (layer.type === "wkt-file") {
             overlays = new google.maps.KmlLayer(layer.text);
         } else {
@@ -442,7 +477,7 @@
             overlays = [ overlays ];
         }
         for (i = 0; i < overlays.length; i++) {
-            overlays[i].overlayData = layer;
+            overlays[i].layer = layer;
         }
         return overlays;
     };

@@ -27,7 +27,19 @@
     <div id="map2" data-map="map" data-type="json" data-input="#map2_data" style="width: 400px; height: 300px"></div>
 
     <textarea id="map2_data" data-type="json">
-        { "type": "GeometryCollection", "geometries": [ { "type": "Point", "coordinates": [ 4, 40 ] } ] }
+        {
+            "type": "GeometryCollection",
+            "geometries": [
+                {
+                    "type": "Point",
+                    "coordinates": [ 4, 40 ]
+                },
+                {
+                    "type": "MultiPoint",
+                    "coordinates": [ [ 5, 41 ], [ 3, 41 ] ]
+                }
+            ]
+        }
     </textarea>
 
     <div id="map3" data-map="map" data-input="#map3_data" style="width: 400px; height: 300px"></div>

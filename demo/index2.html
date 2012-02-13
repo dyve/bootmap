@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>BootMap demo</title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script src="../src/bootmap.js"></script>
+</head>
+
+<body>
+
+    <h1>BootMap demo</h1>
+
+    <p class="info">This is the demo.</p>
+
+    <div id="map2" data-map="map" data-type="json" data-input="#map2_data" style="width: 400px; height: 300px"></div>
+
+    <textarea id="map2_data" data-type="json">
+        {
+            "type": "GeometryCollection",
+            "geometries": [
+                {
+                    "type": "Point",
+                    "coordinates": [ 4, 40 ]
+                },
+                {
+                    "type": "MultiPoint",
+                    "coordinates": [ [ 5, 41 ], [ 3, 41 ] ]
+                }
+            ]
+        }
+    </textarea>
+
+</body>
+
+</html>

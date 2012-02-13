@@ -6,3 +6,4 @@
 bootmap:
 	uglifyjs -nc ./src/bootmap.js > ./src/bootmap.min.js
 	cp ./src/*.js ../gh-pages/current/
+	cp ./src/*.js ../gh-pages/1/

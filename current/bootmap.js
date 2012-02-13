@@ -2,76 +2,114 @@
     "use strict";
 
     var bootmap = {
-        options: {
-            lat: { type: "float" },
-            lng: { type: "float" },
-            zoom: { type: "int", value: 8 },
+        BootMapError: function(message) {
+            this.message = message;
+        },
+        mapParameters: {
+            lat: { type:"float" },
+            lng: { type:"float" },
+            zoom: { type:"int", value:8 },
             input: { }
+        },
+        overlayTypes: {
+            POLYGON: "POLYGON",
+            POLYLINE: "POLYLINE",
+            MARKER: "MARKER"
         }
     };
 
-    var regexRemoveExtraWhitespace = new RegExp(/\s+/g);
-
-    var tidyWKT = function(wkt) {
-        return $.trim(wkt.replace(regexRemoveExtraWhitespace, " ")).replace(") ,", "),");
-    };
-
-    var wktPaths = function(paths) {
-        return _wktPaths(tidyWKT(paths));
-    };
-
-    var _wktPaths = function(paths) {
-        var result = [];
-        var i, r, len, p, x, y;
-        paths = $.trim(paths);
-        if (paths[0] === "(") {
-            len = paths.length;
-            paths = paths.substr(1, len - 2);
-            paths = paths.split("),");
-            for (i = 0; i < paths.length; i++) {
-                p = paths[i];
-                if (i > 0) {
-                    p = $.trim(p);
-                    if (p[0] !== "(") {
-                        return null;
-                    }
-                    p = p.substr(1);
-                }
-                result[i] = _wktPaths(p);
-            }
-        } else {
-            paths = paths.split(",");
-            for (i = 0; i < paths.length; i++) {
-                p = $.trim(paths[i]).split(" ");
-                x = parseFloat(p[0]);
-                y = parseFloat(p[1]);
-                if (isNaN(x) || isNaN(y)) {
-                    return null;
-                }
-                result[i] = [x, y];
+    var createLatLng = function (coordinates) {
+        var lat, lng;
+        if ($.isArray(coordinates) && coordinates.length === 2) {
+            lat = parseFloat(coordinates[1]);
+            lng = parseFloat(coordinates[0]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                return new google.maps.LatLng(lat, lng);
             }
         }
-        return result;
+        throw new bootmap.BootMapError("Invalid coordinate. Expected array with 2 floats, got " + printJSON(coordinates));
+    }
+
+    var createPath = function (coordinates) {
+        var i, path = [];
+        for (i = 0; i < coordinates.length; i++) {
+            path.push(createLatLng(coordinates[i]));
+        }
+        return path;
+    }
+
+    var createPaths = function (coordinates) {
+        var i, paths = [];
+        for (i = 0; i < coordinates.length; i++) {
+            paths.push(createPath(coordinates[i]));
+        }
+        return paths;
+    }
+
+    var createMarker = function (coordinates, options) {
+        var opts = $.extend({}, options);
+        opts.position = createLatLng(coordinates);
+        return new google.maps.Marker(opts);
+    }
+
+    var createPolyline = function (coordinates, options) {
+        var opts = $.extend({}, options);
+        opts.path = createPath(coordinates);
+        return new google.maps.Polyline(opts);
+    }
+
+    var createPolygon = function (coordinates, options) {
+        var opts = $.extend({}, options);
+        opts.paths = createPaths(coordinates);
+        return new google.maps.Polygon(opts);
+    }
+
+    var getPathBounds = function (path) {
+        var i, bounds = new google.maps.LatLngBounds();
+        for (i = 0; i < path.getLength(); i++) {
+            bounds.extend(path.getAt(i));
+        }
+        return bounds;
+    }
+
+    var getPolygonBounds = function (polygon) {
+        var i, paths = polygon.getPaths();
+        var bounds = new google.maps.LatLngBounds();
+        for (i = 0; i < paths.getLength(); i++) {
+            bounds.union(getPathBounds(paths.getAt(i)));
+        }
+        return bounds;
+    }
+
+    var wktPathsToCoordinates = function (wktPaths) {
+        var paths = wktPaths
+            .replace(/([\d\.])\s+([\d\.])/g, '$1#$2')
+            .replace(/\s/g, '')
+            .replace(/\(([\d\.])/g, '(($1')
+            .replace(/([\d\.])\)/g, '$1))')
+            .replace(/([\d\.])\,([\d\.])/g, '$1),($2')
+            .replace(/\#/g, ',')
+            .replace(/\)/g, ']')
+            .replace(/\(/g, '[');
+        try {
+            paths = $.parseJSON(paths);
+        } catch (e) {
+            throw new bootmap.BootMapError("Cannot parse WKT path to coordinates array")
+        }
+        return paths;
     };
 
-    var readWKT = function(wkt) {
+    var wktToGeom = function (wkt) {
         var type, pathsText, len, paths, pos = wkt.indexOf("(");
         if (pos === -1) {
-            throw "Invalid WKT, format not recognized";
+            throw new bootmap.BootMapError("Invalid WKT, format not recognized");
         }
         type = $.trim(wkt.substr(0, pos)).toUpperCase();
         if (!type) {
-            throw "Invalid WKT, no type specified";
+            throw new bootmap.BootMapError("Invalid WKT, no type specified");
         }
-        pathsText = $.trim(wkt.substr(pos));
-        len = pathsText.length;
-        if (pathsText[0] !== "(" || pathsText[len - 1] !== ")") {
-            throw "Invalid WKT, path not in brackets";
-        }
-        paths = wktPaths(pathsText.substr(1, len -2));
-        if (paths === null) {
-            throw "Invalid WKT, cannot parse path " + pathsText;
-        }
+        pathsText = wkt.substr(pos);
+        paths = wktPathsToCoordinates(pathsText);
         switch (type) {
             case "POINT":
                 if (paths.length !== 1) {
@@ -80,12 +118,27 @@
                 type = "Point";
                 paths = paths[0];
                 break;
+            case "MULTIPOINT":
+                type = "MultiPoint";
+                // paths = paths;
+                // TODO: Might have to fix path because WKT allows 2 notations
+                break;
             case "LINESTRING":
                 type = "LineString";
                 // paths = paths;
+                // TODO: Might have to fix path because WKT allows 2 notations
+                break;
+            case "MULTILINESTRING":
+                type = "MultiLineString";
+                // paths = paths;
+                // TODO: Might have to fix path because WKT allows 2 notations
                 break;
             case "POLYGON":
                 type = "Polygon";
+                // paths = paths;
+                break;
+            case "MULTIPOLYGON":
+                type = "MultiPolygon";
                 // paths = paths;
                 break;
             default:
@@ -97,31 +150,47 @@
         };
     };
 
-    var getData = function($elem, index) {
+    var textToGeom = function (text, type) {
+        var geom;
+        switch (type.toLowerCase()) {
+            case "wkt":
+                geom = wktToGeom(text);
+                break;
+            case "json":
+                geom = $.parseJSON(text);
+                break;
+            default:
+                geom = null;
+                break;
+        }
+        return geom;
+    };
+
+    var getData = function ($elem, index) {
         return $elem.attr('data-' + index);
     };
 
-    var parseGeom = function(input) {
-        var $input = $(input);
-        var editable = $input.filter(":input").length > 0;
-        var rawContent = editable ? $input.val() : $input.html();
-        var type = getData($input, "type");
-        if (type && rawContent) {
+    var parseLayerElem = function (elem) {
+        var $elem = $(elem);
+        var editable = $elem.filter(":input").length > 0;
+        var text = editable ? $elem.val() : $elem.html();
+        var type = getData($elem, "type");
+        if (type && text) {
             return {
-                input: input,
-                $input: $input,
-                rawContent: rawContent,
+                elem: elem,
+                $elem: $elem,
+                text: text,
                 type: type,
-                geom: parseRawContent(rawContent, type),
+                geom: textToGeom(text, type),
                 editable: editable
             };
         }
         return null;
     };
 
-    var getMapData = function($elem, options) {
-        var overlay, data = {};
-        $.each(bootmap.options, function(index, option) {
+    var parseMapElem = function ($elem, options) {
+        var layer, data = {};
+        $.each(bootmap.mapParameters, function (index, option) {
             var value = options[index];
             if (undefined === value) {
                 value = getData($elem, index);
@@ -142,91 +211,64 @@
             }
             data[index] = value;
         });
-        data.overlays = [];
-        overlay = parseGeom($elem[0]);
-        if (overlay) {
-            data.overlays.push(overlay);
+        data.layers = [];
+        layer = parseLayerElem($elem[0]);
+        if (layer) {
+            data.layers.push(layer);
         }
         if (data.input) {
-            $(data.input).each(function() {
-                overlay = parseGeom(this);
-                if (overlay) {
-                    data.overlays.push(overlay);
+            $(data.input).each(function () {
+                layer = parseLayerElem(this);
+                if (layer) {
+                    data.layers.push(layer);
                 }
             });
         }
-        delete data.type;
         return data;
     };
 
-    var parseRawContent = function(rawContent, type) {
-        var geom;
-        switch (type.toLowerCase()) {
-            case "wkt":
-                geom = readWKT(rawContent);
-                break;
-            case "json":
-                geom = $.parseJSON(rawContent);
-                break;
-            default:
-                geom = null;
-                break;
-        }
-        return geom;
-    };
-
-    var createPath = function(coordinates) {
-        var path = [];
-        for (var i=0; i < coordinates.length; i++) {
-            path.push(new google.maps.LatLng(
-                coordinates[i][1],
-                coordinates[i][0]
-            ));
-        }
-        return path;
-    };
-
-    var createPaths = function(coordinates) {
-        var paths = [];
-        for (var i=0; i < coordinates.length; i++) {
-            paths.push(createPath(coordinates[i]));
-        }
-        return paths;
-    };
-
-    var overlayType = function(overlay) {
+    var overlayType = function (overlay) {
         if (overlay instanceof google.maps.Marker) {
-            return "Point";
+            return bootmap.overlayTypes.MARKER;
         }
         if (overlay instanceof google.maps.Polyline) {
-            return "LineString";
+            return bootmap.overlayTypes.POLYLINE;
         }
         if (overlay instanceof google.maps.Polygon) {
-            return "Polygon";
+            return bootmap.overlayTypes.POLYGON;
         }
         return null;
     };
 
-    var overlayToGeom = function(overlay) {
-        var type = overlayType(overlay);
-        var path, paths = getPathsFromOverlay(overlay);
-        var i, j, coord, coordinates = [];
-        for (i=0; i < paths.length; i++) {
-            path = paths[i];
-            coordinates[i] = [];
-            for (j=0; j < path.length; j++) {
-                coord = path[j];
-                coordinates[i][j] = [ coord.lng(), coord.lat() ];
-            }
+    var pathsToCoordinates = function(paths) {
+        var i, result;
+        if (paths instanceof google.maps.LatLng) {
+            return [ paths.lng(), paths.lat() ];
         }
+        result = [];
+        for (i = 0; i < paths.length; i++) {
+            result.push(pathsToCoordinates(paths[i]));
+        }
+        return result;
+    };
+
+    var getCoordinatesFromOverlay = function(overlay) {
+        return pathsToCoordinates(
+            getPathsFromOverlay(overlay)
+        );
+    };
+
+    var overlayToGeom = function (overlay) {
+        var type = overlayType(overlay);
+        var coordinates = getCoordinatesFromOverlay(overlay);
         switch (type) {
-            case "Point":
+            case bootmap.overlayTypes.MARKER:
                 coordinates = coordinates[0][0];
                 break;
-            case "LineString":
+            case bootmap.overlayTypes.POLYLINE:
                 coordinates = coordinates[0];
                 break;
-            case "Polygon":
+            case  bootmap.overlayTypes.POLYGON:
                 // fine
                 break;
             default:
@@ -238,7 +280,7 @@
         };
     };
 
-    var onOverlayChange = function(overlay) {
+    var onOverlayChange = function (overlay) {
         var geom = overlayToGeom(overlay);
         var type = overlay.overlayData.type;
         var output;
@@ -252,10 +294,10 @@
             default:
                 throw "No output support for type " + type;
         }
-        overlay.overlayData.$input.filter(":input").val(output);
+        overlay.overlayData.$elem.filter(":input").val(output);
     };
 
-    var coordinatesToWKT = function(coordinates) {
+    var coordinatesToWKT = function (coordinates) {
         if (!$.isArray(coordinates[0])) {
             return coordinates[0] + " " + coordinates[1];
         }
@@ -266,34 +308,36 @@
         return "(" + result.join(",") + ")";
     };
 
-    var printWKT = function(geom) {
+    var printWKT = function (geom) {
         return geom.type.toUpperCase() + coordinatesToWKT(geom.coordinates);
     };
 
-    var printJSON = function(geom) {
+    var printJSON = function (geom) {
         var i, temp = [];
         if ($.isArray(geom)) {
-            for(i = 0; i < geom.length; i++) {
+            for (i = 0; i < geom.length; i++) {
                 temp.push(printJSON(geom[i]));
             }
             return '[ ' + temp.join(', ') + ' ]';
         }
         if (typeof(geom) === 'object') {
-            $.each(geom, function(index, value) {
+            $.each(geom, function (index, value) {
                 temp.push('"' + index + '": ' + printJSON(value));
             });
             return '{ ' + temp.join(', ') + ' }';
         }
         if (typeof(geom) === 'string') {
-            return '"' +geom + '"';
+            return '"' + geom + '"';
         }
         return '' + geom;
     };
 
-    var addListenersToPolygon = function(overlay) {
-        var callback = function() { onOverlayChange(overlay); };
+    var addListenersToPolygon = function (overlay) {
+        var callback = function () {
+            onOverlayChange(overlay);
+        };
         var i, path, paths = overlay.getPaths();
-        for (i=0; i < paths.getLength(); i++) {
+        for (i = 0; i < paths.getLength(); i++) {
             path = paths.getAt(i);
             google.maps.event.addListener(path, 'insert_at', callback);
             google.maps.event.addListener(path, 'remove_at', callback);
@@ -301,62 +345,109 @@
         }
     };
 
-    var addListenersToPolyline = function(overlay) {
-        var callback = function() { onOverlayChange(overlay); };
+    var addListenersToPolyline = function (overlay) {
+        var callback = function () {
+            onOverlayChange(overlay);
+        };
         var path = overlay.getPath;
         google.maps.event.addListener(path, 'insert_at', callback);
         google.maps.event.addListener(path, 'remove_at', callback);
         google.maps.event.addListener(path, 'set_at', callback);
     };
 
-    var createOverlay = function(overlayData) {
-        var geom;
-        var overlay = null;
-        var overlayOptions = {};
-        if (overlayData.type === "wkt-file") {
-            overlay = new google.maps.KmlLayer(overlayData.rawContent);
-        } else {
-            geom = overlayData.geom;
-            overlayOptions.editable = overlayData.editable;
-            if (geom.type === "GeometryCollection") {
-                if (geom.geometries.length === 1) {
-                    geom = geom.geometries[0];
-                } else {
-                    throw "Bootmap can only handle GeometryCollections of length 1";
-                }
+    /**
+     * Create an array of overlays from a geometry
+     * @param geom
+     * @param overlayOptions
+     * @return array
+     */
+    var createOverlaysFromGeom = function(geom, overlayOptions) {
+        var i, result;
+        overlayOptions = overlayOptions || {};
+        if (geom.type === "GeometryCollection") {
+            result = [];
+            for (i = 0; i < geom.geometries.length; i++) {
+                result.push(createOverlaysFromGeom(geom.geometries[i]));
             }
-            switch(geom.type) {
+        } else {
+            var multiGeom = function(type, coordinates) {
+                var overlays = [];
+                for (i = 0; i < geom.coordinates.length; i++) {
+                    overlays.push(createOverlaysFromGeom({
+                        type: type,
+                        coordinates: geom.coordinates[i]
+                    }, overlayOptions));
+                }
+                return overlays;
+            };
+            switch (geom.type) {
                 case 'Point':
-                    overlayOptions.position = new google.maps.LatLng(geom.coordinates[1], geom.coordinates[0]);
-                    overlay = new google.maps.Marker(overlayOptions);
+                    result = createMarker(geom.coordinates, overlayOptions);
                     if (overlayOptions.editable) {
-                        overlay.setDraggable(true);
-                        google.maps.event.addListener(overlay, 'dragend', function() {
-                            onOverlayChange(overlay);
+                        result.setDraggable(true);
+                        google.maps.event.addListener(result, 'dragend', function () {
+                            onOverlayChange(result);
                         });
                     }
                     break;
+                case 'MultiPoint':
+                    result = multiGeom('Point', geom.coordinates);
+                    break;
                 case 'LineString':
-                    overlayOptions.path = createPath(geom.coordinates);
-                    overlay = new google.maps.Polyline(overlayOptions);
-                    addListenersToPolyline(overlay);
+                    result = createPolyline(geom.coordinates, overlayOptions);
+                    addListenersToPolyline(result);
+                    break;
+                case 'MultiLineString':
+                    result = multiGeom('LineString', geom.coordinates);
                     break;
                 case 'Polygon':
-                    overlayOptions.paths = createPaths(geom.coordinates);
-                    overlay = new google.maps.Polygon(overlayOptions);
-                    addListenersToPolygon(overlay);
+                    result = createPolygon(geom.coordinates, overlayOptions);
+                    addListenersToPolygon(result);
+                    break;
+                case 'MultiPolygon':
+                    result = multiGeom('Polygon', geom.coordinates);
                     break;
                 default:
                     throw "Bootmap cannot handle geometries of type '" + geom.type + "'";
             }
         }
-        if (overlay) {
-            overlay.overlayData = overlayData;
-        }
-        return overlay;
+        return result;
     };
-    
-    var createMap = function(elem, mapData) {
+
+    var flattenArray = function(array) {
+        var i, j, e, flat = [];
+        if (!$.isArray(array)) {
+            flat.push(array);
+        } else {
+            for (i = 0; i < array.length; i++) {
+                e = flattenArray(array[i]);
+                for (j = 0; j < e.length; j++) {
+                    flat.push(e[j]);
+                }
+            }
+        }
+        return flat;
+    };
+
+    var createOverlaysFromLayer = function(layer) {
+        var i, overlays = null;
+        var overlayOptions = {};
+        if (layer.type === "wkt-file") {
+            overlays = new google.maps.KmlLayer(layer.text);
+        } else {
+            overlays = createOverlaysFromGeom(layer.geom, overlayOptions);
+        }
+        overlays = flattenArray(overlays);
+        if (!$.isArray(overlays)) {
+            overlays = [ overlays ];
+        }
+        for (i = 0; i < overlays.length; i++) {
+            overlays[i].overlayData = layer;
+        }
+        return overlays;
+    };
+
+    var createMap = function (elem, mapData) {
         var center = new google.maps.LatLng(mapData.lat, mapData.lng);
         return new google.maps.Map(elem, {
             center: center,
@@ -365,30 +456,32 @@
         });
     };
 
-    var getPathsFromOverlay = function(overlay) {
+    var getPathsFromOverlay = function (overlay) {
         var paths, p;
         if (overlay.getPaths) {
             p = overlay.getPaths();
             paths = [];
-            for (var i =0; i < p.getLength(); i++) {
+            for (var i = 0; i < p.getLength(); i++) {
                 paths.push(p.getAt(i).getArray());
             }
         } else if (overlay.getPath) {
             paths = [ overlay.getPath().getArray() ];
         } else if (overlay.getPosition) {
-            paths = [ [ overlay.getPosition() ] ];
+            paths = [
+                [ overlay.getPosition() ]
+            ];
         }
         return paths;
     };
 
-    var getBoundsFromOverlay = function(overlay) {
+    var getBoundsFromOverlay = function (overlay) {
         var bounds = new google.maps.LatLngBounds();
         var path, paths = getPathsFromOverlay(overlay);
         var i, j;
         if (paths) {
-            for (i=0; i < paths.length; i++) {
+            for (i = 0; i < paths.length; i++) {
                 path = paths[i];
-                for (j=0; j < path.length; j++) {
+                for (j = 0; j < path.length; j++) {
                     bounds.extend(path[j]);
                 }
             }
@@ -396,47 +489,47 @@
         return bounds;
     };
 
-    bootmap.initElem = function(elem, options) {
-        var i, overlay, bounds;
+    var createOverlaysFromLayers = function(layers) {
+        var i, j, o, overlays = [];
+        for (i = 0; i < layers.length; i++) {
+            o = createOverlaysFromLayer(layers[i]);
+            for (j = 0; j < o.length; j++) {
+                overlays.push(o[j]);
+            }
+        }
+        return overlays;
+    };
+
+    bootmap.initElem = function (elem, options) {
+        var i, overlay, overlays, bounds;
         var $elem = $(elem);
-        var mapData = getMapData($elem, options);
+        var mapData = parseMapElem($elem, options);
         var map = createMap(elem, mapData);
-        /*
-        var drawingManager = new google.maps.drawing.DrawingManager({
-            drawingMode: google.maps.drawing.OverlayType.POLYGON,
-            markerOptions: {
-                draggable: true
-            },
-            polylineOptions: {
-                editable: true
-            },
-            map: map
-        });
-        */
-        if (mapData.overlays.length) {
+        if (mapData.layers.length) {
             bounds = new google.maps.LatLngBounds();
-            for (i=0; i < mapData.overlays.length; i++) {
-                overlay = createOverlay(mapData.overlays[i]);
+            overlays = createOverlaysFromLayers(mapData.layers);
+            for (i = 0; i < overlays.length; i++) {
+                overlay = overlays[i];
                 overlay.setMap(map);
                 bounds.union(getBoundsFromOverlay(overlay));
             }
             map.fitBounds(bounds);
         }
         $elem.data({
-            map: map,
-            mapData: mapData
+            map:map,
+            mapData:mapData
         });
     };
 
-    bootmap.googleMapsLoaded = function() {
+    bootmap.googleMapsLoaded = function () {
         return typeof(google) !== 'undefined' && typeof(google.maps) !== 'undefined' && typeof(google.maps.drawing) !== 'undefined';
     };
 
-    bootmap.init = function() {
+    bootmap.init = function () {
         $("[data-map]").bootmap();
     };
 
-    $.fn.bootmap = function(options) {
+    $.fn.bootmap = function (options) {
         options = $.extend({}, $.fn.options, options);
         return this.each(function () {
             bootmap.initElem(this, options);

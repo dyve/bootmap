@@ -309,13 +309,40 @@
         };
     };
 
+    var changeGeom = function(geom, geomIndex, newGeom) {
+        var nextGeom, j, i;
+        i = geomIndex.split(',');
+        j = parseInt(i.shift(), 10);
+        if (i.length === 0) {
+            if ($.isArray(geom)) {
+                geom[j] = newGeom.coordinates;
+            } else if (geom.type.substr(0, 5) === 'Multi') {
+                geom.coordinates[j] = newGeom.coordinates;
+            } else if (geom.type === 'GeometryCollection') {
+                geom.geometries[j] = newGeom;
+            } else {
+                throw new Error("Invalid Geometry type: " + geom.type);
+            }
+        } else {
+            if (geom.type === 'GeometryCollection') {
+                nextGeom = geom.geometries[j];
+            } else {
+                throw new Error("Invalid Geometry type: " + geom.type);
+            }
+            changeGeom(nextGeom, i.join(','), newGeom);
+        }
+    };
+
     var onOverlayChange = function (overlay) {
         var newGeom = overlayToGeom(overlay);
         var geomIndex = overlay.geomIndex;
         if (geomIndex === '0') {
             overlay.layer.geom = newGeom;
         } else {
-            throw new Error("This is not possible yet, sorry");
+            if (geomIndex.substr(0, 2) !== '0,') {
+                throw new Error('Invalid geomIndex ' + geomIndex);
+            }
+            changeGeom(overlay.layer.geom, geomIndex.substr(2), newGeom);
         }
         var type = overlay.layer.type;
         var output;

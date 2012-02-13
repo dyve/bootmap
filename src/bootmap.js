@@ -510,7 +510,6 @@
             overlays = createOverlaysFromLayers(mapData.layers);
             for (i = 0; i < overlays.length; i++) {
                 overlay = overlays[i];
-                console.log(overlay);
                 overlay.setMap(map);
                 bounds.union(getBoundsFromOverlay(overlay));
             }

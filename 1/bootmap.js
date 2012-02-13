@@ -360,18 +360,32 @@
     };
 
     var coordinatesToWKT = function (coordinates) {
+        var i, result;
+        if (coordinates === null) {
+            return ' EMPTY ';
+        }
         if (!$.isArray(coordinates[0])) {
             return coordinates[0] + " " + coordinates[1];
         }
-        var result = [];
-        for (var i = 0; i < coordinates.length; i++) {
+        result = [];
+        for (i = 0; i < coordinates.length; i++) {
             result[i] = coordinatesToWKT(coordinates[i]);
         }
         return "(" + result.join(",") + ")";
     };
 
     var printWKT = function (geom) {
-        return geom.type.toUpperCase() + coordinatesToWKT(geom.coordinates);
+        var i, wkt;
+        if (geom.type === "GeometryCollection") {
+            wkt = [];
+            for (i = 0; i < geom.geometries.length; i++) {
+                wkt.push(printWKT(geom.geometries[i]));
+            }
+            wkt = "GEOMETRYCOLLECTION(" + wkt.join(",") + ")";
+        } else {
+            wkt = geom.type.toUpperCase() + coordinatesToWKT(geom.coordinates);
+        }
+        return wkt;
     };
 
     var printJSON = function (geom) {

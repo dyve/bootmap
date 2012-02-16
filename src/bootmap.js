@@ -3,10 +3,16 @@
 
     var bootmap = {
         mapParameters: {
-            lat: { type:"float" },
-            lng: { type:"float" },
-            zoom: { type:"int", value:8 },
-            input: { }
+            lat: { type: "float" },
+            lng: { type: "float" },
+            zoom: { type: "int", value: 8 },
+        },
+        layerParameters: {
+            "stroke-color": { type: "string" },
+            "stroke-opacity": { type: "float" },
+            "stroke-weight": { type: "integer" },
+            "fill-color": { type: "string" },
+            "fill-opacity": { type: "float" }
         },
         OverlayType: {
             POLYGON: "POLYGON",
@@ -86,6 +92,7 @@
 
     var createPolygon = function (coordinates, options) {
         var opts = $.extend({}, options);
+        console.log(opts);
         opts.paths = createPaths(coordinates);
         return new google.maps.Polygon(opts);
     }
@@ -126,7 +133,7 @@
     };
 
     var wktToGeom = function (wkt) {
-        var type, pathsText, len, paths, pos = wkt.indexOf("(");
+        var type, pathsText, paths, pos = wkt.indexOf("(");
         if (pos === -1) {
             throw new Error("Invalid WKT, format not recognized");
         }
@@ -176,9 +183,9 @@
         };
     };
 
-    var textToGeom = function (text, type) {
+    var textToGeom = function (text, format) {
         var geom;
-        switch (type.toLowerCase()) {
+        switch (format.toLowerCase()) {
             case "wkt":
                 geom = wktToGeom(text);
                 break;
@@ -196,20 +203,44 @@
         return $elem.attr('data-' + index);
     };
 
-    var parseLayerElem = function (elem) {
+    var parseLayerElem = function (elem, options) {
         var $elem = $(elem);
         var editable = $elem.filter(":input").length > 0;
-        var text = editable ? $elem.val() : $elem.html();
-        var type = getData($elem, "type");
-        if (type && text) {
-            return {
-                elem: elem,
-                $elem: $elem,
-                text: text,
-                type: type,
-                geom: textToGeom(text, type),
-                editable: editable
-            };
+        var format = getData($elem, "format");
+        var map, text, layer = {};
+        map = options.map || getData($elem, "map");
+        text = options.text || (editable ? $elem.val() : $elem.html());
+        if (format && text) {
+            $.each(bootmap.layerParameters, function (index, option) {
+                var value = options[index];
+                if (undefined === value) {
+                    value = getData($elem, index);
+                }
+                switch (option.type) {
+                    case "int":
+                        value = parseInt(value, 10);
+                        if (isNaN(value)) {
+                            value = option.value;
+                        }
+                        break;
+                    case "float":
+                        value = parseFloat(value);
+                        if (isNaN(value)) {
+                            value = option.value;
+                        }
+                        break;
+                }
+                layer[index] = value;
+            });
+            layer.elem = elem;
+            layer.$elem = $elem;
+            layer.text = text;
+            layer.map = map;
+            layer.format = format;
+            layer.geom = textToGeom(text, format);
+            layer.editable = editable;
+            console.log(layer);
+            return layer;
         }
         return null;
     };
@@ -238,18 +269,6 @@
             data[index] = value;
         });
         data.layers = [];
-        layer = parseLayerElem($elem[0]);
-        if (layer) {
-            data.layers.push(layer);
-        }
-        if (data.input) {
-            $(data.input).each(function () {
-                layer = parseLayerElem(this);
-                if (layer) {
-                    data.layers.push(layer);
-                }
-            });
-        }
         return data;
     };
 
@@ -344,9 +363,9 @@
             }
             changeGeom(overlay.layer.geom, geomIndex.substr(2), newGeom);
         }
-        var type = overlay.layer.type;
+        var format = overlay.layer.format;
         var output;
-        switch (type) {
+        switch (format) {
             case "wkt":
                 output = printWKT(overlay.layer.geom);
                 break;
@@ -354,7 +373,7 @@
                 output = printJSON(overlay.layer.geom);
                 break;
             default:
-                throw "No output support for type " + type;
+                throw "No output support for format " + format;
         }
         overlay.layer.$elem.filter(":input").val(output);
     };
@@ -506,9 +525,14 @@
     var createOverlaysFromLayer = function(layer) {
         var i, overlays = null;
         var overlayOptions = {
-            editable: layer.editable
+            editable: layer.editable,
+            strokeColor: layer["stroke-color"],
+            strokeOpacity: layer["stroke-opacity"],
+            strokeWeight: layer["stroke-weight"],
+            fillColor: layer["fill-color"],
+            fillOpacity: layer["fill-opacity"]
         };
-        if (layer.type === "wkt-file") {
+        if (layer.format === "wkt-file") {
             overlays = new google.maps.KmlLayer(layer.text);
         } else {
             overlays = createOverlaysFromGeom(layer.geom, overlayOptions);
@@ -576,24 +600,54 @@
         return overlays;
     };
 
-    bootmap.initElem = function (elem, options) {
-        var i, overlay, overlays, bounds;
+    bootmap.initMap = function (elem, options) {
+        var opts = $.extend({}, options);
         var $elem = $(elem);
-        var mapData = parseMapElem($elem, options);
+        var mapData = parseMapElem($elem, opts);
+        var html = $.trim($elem.html());
         var map = createMap(elem, mapData);
-        if (mapData.layers.length) {
-            bounds = new google.maps.LatLngBounds();
-            overlays = createOverlaysFromLayers(mapData.layers);
-            for (i = 0; i < overlays.length; i++) {
-                overlay = overlays[i];
-                overlay.setMap(map);
-                bounds.union(getBoundsFromOverlay(overlay));
-            }
-            map.fitBounds(bounds);
-        }
         $elem.data({
-            map:map,
-            mapData:mapData
+            map: map,
+            mapData: mapData
+        });
+        if (html) {
+            opts.text = html;
+            opts.map = $elem.attr('id');
+            bootmap.initLayer(elem, opts);
+        }
+    };
+
+    bootmap.initLayer = function(elem, options) {
+        var map, mapData, $mapElem;
+        var layer, bounds, overlay, overlays, i;
+        var opts = $.extend({}, options);
+        layer = parseLayerElem(elem, opts);
+        if (!layer) {
+            return;
+        }
+        if (layer.map) {
+            $mapElem = $("#" + layer.map);
+            map = $mapElem.data('map');
+            mapData = $mapElem.data('mapData');
+        }
+        if (!$mapElem || !map || !mapData) {
+            throw new Error("Cannot find map: " + layer.map ? layer.map : "(none)");
+        }
+        mapData.layers.push(layer);
+        bounds = map.getBounds();
+        if (!bounds) {
+            bounds = new google.maps.LatLngBounds();
+        }
+        overlays = createOverlaysFromLayers(mapData.layers);
+        for (i = 0; i < overlays.length; i++) {
+            overlay = overlays[i];
+            overlay.setMap(map);
+            bounds.union(getBoundsFromOverlay(overlay));
+        }
+        map.fitBounds(bounds);
+        $mapElem.data({
+            map: map,
+            mapData: mapData
         });
     };
 
@@ -606,9 +660,20 @@
     };
 
     $.fn.bootmap = function (options) {
+        var layers = [];
         options = $.extend({}, $.fn.options, options);
+        this.each(function () {
+            var map = $(this).attr('data-map');
+            var layers = [];
+            if (!map || map === $(this).attr('id')) {
+                bootmap.initMap(this, options);
+            }
+        });
         return this.each(function () {
-            bootmap.initElem(this, options);
+            var map = $(this).attr('data-map');
+            if (map && map !== $(this).attr('id')) {
+                bootmap.initLayer(this, options);
+            }
         });
     };
 

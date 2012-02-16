@@ -16,17 +16,17 @@
 
     <hr>
 
-    <div id="map0" data-map="map" data-type="wkt" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
+    <div id="map0" data-map data-format="wkt" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
         Polygon ((4 40, 5 40, 5 45, 4                    45, 4 40)    ,    ( 4.2 41  , 4.8 44,4.8 41, 4.2   41 ))
     </div>
 
-    <div id="map1" data-map="map" data-type="json" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
+    <div id="map1" data-map data-format="json" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
         { "type": "Polygon", "coordinates": [ [ [4, 40], [5, 40], [5, 45], [4, 45], [4, 40] ], [ [4.2, 41], [4.8, 44], [4.8, 41], [4.2, 41] ] ] }
     </div>
 
-    <div id="map2" data-map="map" data-type="json" data-input="#map2_data" style="width: 400px; height: 300px"></div>
+    <div id="map2" data-map style="width: 400px; height: 300px"></div>
 
-    <textarea id="map2_data" data-type="json">
+    <textarea id="map2_data" data-map="map2" data-format="json">
         {
             "type": "GeometryCollection",
             "geometries": [
@@ -42,13 +42,13 @@
         }
     </textarea>
 
-    <div id="map3" data-map="map" data-input="#map3_data" style="width: 400px; height: 300px"></div>
+    <div id="map3" data-map data-input="#map3_data" style="width: 400px; height: 300px"></div>
 
-    <textarea id="map3_data" data-type="wkt">
+    <textarea id="map3_data" data-map="map3" data-format="wkt">
         Polygon ((4 40, 5 40, 5 45, 4                    45, 4 40)    ,    ( 4.2 41  , 4.8 44,4.8 41, 4.2   41 ))
     </textarea>
 
-    <div id="map4" data-map="map" data-type="wkt-file" style="width: 400px; height: 300px">http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml</div>
+    <div id="map4" data-map="map4" data-format="wkt-file" style="width: 400px; height: 300px">http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml</div>
 
 </body>
 

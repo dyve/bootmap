@@ -14,22 +14,12 @@
 
     <p class="info">This is the demo.</p>
 
-    <div id="map2" data-map="map" data-type="json" data-input="#map2_data" style="width: 400px; height: 300px"></div>
+    <div id="map1" data-map data-format="json" style="width: 400px; height: 300px"></div>
 
-    <textarea id="map2_data" data-type="json">
-        {
-            "type": "GeometryCollection",
-            "geometries": [
-                {
-                    "type": "Point",
-                    "coordinates": [ 4, 40 ]
-                },
-                {
-                    "type": "MultiPoint",
-                    "coordinates": [ [ 5, 41 ], [ 3, 41 ] ]
-                }
-            ]
-        }
+    <textarea id="map2_data" data-map="map1" data-format="wkt" data-stroke-color="#f00" data-fill-color="#0f0">
+        MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)),
+        ((20 35, 45 20, 30 5, 10 10, 10 30, 20 35),
+        (30 20, 20 25, 20 15, 30 20)))
     </textarea>
 
 </body>

@@ -92,7 +92,6 @@
 
     var createPolygon = function (coordinates, options) {
         var opts = $.extend({}, options);
-        console.log(opts);
         opts.paths = createPaths(coordinates);
         return new google.maps.Polygon(opts);
     }
@@ -239,7 +238,6 @@
             layer.format = format;
             layer.geom = textToGeom(text, format);
             layer.editable = editable;
-            console.log(layer);
             return layer;
         }
         return null;

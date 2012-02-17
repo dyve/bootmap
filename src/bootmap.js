@@ -610,7 +610,7 @@
         });
         if (html) {
             opts.text = html;
-            opts.map = $elem.attr('id');
+            opts.map = $elem;
             bootmap.initLayer(elem, opts);
         }
     };
@@ -624,7 +624,11 @@
             return;
         }
         if (layer.map) {
-            $mapElem = $("#" + layer.map);
+            if (typeof(layer.map) === 'object') {
+                $mapElem = layer.map;
+            } else {
+                $mapElem = $("#" + layer.map);
+            }
             map = $mapElem.data('map');
             mapData = $mapElem.data('mapData');
         }
@@ -662,17 +666,16 @@
         options = $.extend({}, $.fn.options, options);
         this.each(function () {
             var map = $(this).attr('data-map');
-            var layers = [];
             if (!map || map === $(this).attr('id')) {
                 bootmap.initMap(this, options);
+            } else {
+                layers.push(this);
             }
         });
-        return this.each(function () {
-            var map = $(this).attr('data-map');
-            if (map && map !== $(this).attr('id')) {
-                bootmap.initLayer(this, options);
-            }
+        $.each(layers, function(index, layer) {
+            bootmap.initLayer(layer, options);
         });
+        return this;
     };
 
     $.fn.bootmap.defaults = {

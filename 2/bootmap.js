@@ -96,23 +96,6 @@
         return new google.maps.Polygon(opts);
     }
 
-    var getPathBounds = function (path) {
-        var i, bounds = new google.maps.LatLngBounds();
-        for (i = 0; i < path.getLength(); i++) {
-            bounds.extend(path.getAt(i));
-        }
-        return bounds;
-    }
-
-    var getPolygonBounds = function (polygon) {
-        var i, paths = polygon.getPaths();
-        var bounds = new google.maps.LatLngBounds();
-        for (i = 0; i < paths.getLength(); i++) {
-            bounds.union(getPathBounds(paths.getAt(i)));
-        }
-        return bounds;
-    }
-
     var wktPathsToCoordinates = function (wktPaths) {
         var paths = wktPaths
             .replace(/([\d\.])\s+([\d\.])/g, '$1#$2')
@@ -405,7 +388,7 @@
         return wkt;
     };
 
-    var printJSON = function (geom) {
+    var printJSON = function(geom) {
         var i, temp = [];
         if ($.isArray(geom)) {
             for (i = 0; i < geom.length; i++) {
@@ -425,7 +408,7 @@
         return '' + geom;
     };
 
-    var addListenersToPolygon = function (overlay) {
+    var addListenersToPolygon = function(overlay) {
         var callback = function () {
             onOverlayChange(overlay);
         };
@@ -438,11 +421,11 @@
         }
     };
 
-    var addListenersToPolyline = function (overlay) {
+    var addListenersToPolyline = function(overlay) {
         var callback = function () {
             onOverlayChange(overlay);
         };
-        var path = overlay.getPath;
+        var path = overlay.getPath();
         google.maps.event.addListener(path, 'insert_at', callback);
         google.maps.event.addListener(path, 'remove_at', callback);
         google.maps.event.addListener(path, 'set_at', callback);

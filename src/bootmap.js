@@ -600,7 +600,8 @@
 
     bootmap.initLayer = function(elem, options) {
         var map, mapData, $mapElem;
-        var layer, bounds, overlay, overlays, i;
+        var layer, overlay, overlays, i;
+        var bounds, center, ne;
         var opts = $.extend({}, options);
         layer = parseLayerElem(elem, opts);
         if (!layer) {
@@ -628,6 +629,13 @@
             overlay = overlays[i];
             overlay.setMap(map);
             bounds.union(getBoundsFromOverlay(overlay));
+        }
+        center = bounds.getCenter();
+        if (center.equals(bounds.getNorthEast())) {
+            bounds = new google.maps.Circle({
+                center: center,
+                radius: 1000
+            }).getBounds();
         }
         map.fitBounds(bounds);
         $mapElem.data({

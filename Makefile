@@ -24,3 +24,5 @@ sdist: gh-pages
 	cd ../gh-pages
 	git add *
 	git commit -a -m "Updated gh-pages from Makefile"
+	git push
+

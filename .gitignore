@@ -8,3 +8,4 @@ doc/*
 MANIFEST
 dist/
 django_bootstrap.egg-info/
+gh-pages/

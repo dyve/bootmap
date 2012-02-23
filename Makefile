@@ -19,3 +19,8 @@ gh-pages: bootmap
 	cp ./src/*.js ../gh-pages/${BOOTMAP_MAJOR_VERSION}
 	rm ../gh-pages/*.html
 	cp ./docs/*html ../gh-pages
+
+sdist: gh-pages
+	cd ../gh-pages
+	git add *
+	git commit -a -m "Updated gh-pages from Makefile"

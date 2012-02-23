@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset='utf-8'>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Bootmap - Generate static, dynamic and editable maps from semantic HTML</title>
+    <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+    <style>
+
+        body {
+            padding-top: 40px;
+        }
+
+        .hero-unit {
+            background: #0066b2;
+            background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0.3, rgb(129, 174, 204)), color-stop(0.65, rgb(21, 119, 189)), color-stop(0.83, rgb(0, 101, 178)));
+            /* Safari 4-5, Chrome 1-9 */
+            background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#81aecc), to(#0066b2));
+            /* Safari 5.1, Chrome 10+ */
+            background: -webkit-linear-gradient(top, #81aecc, #0066b2);
+            /* Firefox 3.6+ */
+            background: -moz-linear-gradient(top, #81aecc, #0066b2);
+            /* IE 10 */
+            background: -ms-linear-gradient(top, #81aecc, #0066b2);
+            /* Opera 11.10+ */
+            background: -o-linear-gradient(top, #81aecc, #0066b2);
+            color: #fff;
+            padding: 1em;
+            margin: .6em 0;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+            text-shadow: 2px 2px 2px #0066b2;
+        }
+
+        .hero-unit h1 {
+            color: #fff;
+        }
+
+    </style>
+    <!-- jQuery -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <!-- Bootmap -->
+    <script src="//dyve.github.com/bootmap/current/bootmap.min.js"></script>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="topbar">
+        <div class="fill">
+            <div class="container">
+                <a class="brand" href="#">Bootmap</a>
+                <ul class="nav">
+                    <li class="active"><a href="#">Home</a></li>
+                    <li><a href="#simple">Simple maps</a></li>
+                    <li><a href="#editable">Editable polygon</a></li>
+                    <li><a href="#kml-files">Load KML files</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-unit">
+        <h1>Bootmap</h1>
+
+        <p class="subtitle">Generate static, dynamic and editable maps from semantic HTML</p>
+    </div>
+
+    <div class="row" id="quickstart">
+
+        <div class="span8">
+            <h6>Hotlink the script</h6>
+
+            <p>Copy these 2 lines into the <code>head</code> section of your HTML.</p>
+            <textarea class="span8" style="height: 3em; font-size: 90%" id="hotlink">&lt;script src=&quot;//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;//dyve.github.com/bootmap/current/bootmap.min.js&quot;&gt;&lt;/script&gt;</textarea>
+        </div>
+        <div class="span8">
+            <h6>Check out the source</h6>
+
+            <p>Everything is available at GitHub. Check out <a href="https://github.com/dyve/bootmap">https://github.com/dyve/bootmap</a>.
+                Clone it, fork it, use it!</p>
+
+            <p><a class="btn primary" href="https://github.com/dyve/bootmap">Bootmap on GitHub</a></p>
+        </div>
+
+    </div>
+
+    <a name="simple">&nbsp;</a>
+    <h2>Simple Maps</h2>
+
+    <div class="row">
+
+        <div class="span8 cols">
+            <p>Bootmap turns this</p>
+            <pre>&lt;div style=&quot;width: 400px; height: 300px&quot; data-map=&quot;map&quot; data-lat=&quot;40&quot; data-lng=&quot;4&quot; data-zoom=&quot;5&quot;&gt;&lt;/div&gt;</pre>
+        </div>
+        <div class="span8 cols">
+            <p>into this</p>
+
+            <div style="width: 400px; height: 300px" data-map="map" data-lat="40" data-lng="4" data-zoom="5"></div>
+        </div>
+
+    </div>
+
+    <a name="editable">&nbsp;</a>
+    <h2>Editable polygon</h2>
+
+    <div class="row">
+
+        <div class="span8 cols">
+            <p>Bootmap turns this</p>
+<pre>&lt;div data-map=&quot;map&quot; data-input=&quot;#map3_data&quot; style=&quot;width: 400px; height: 300px&quot;&gt;&lt;/div&gt;
+&lt;textarea id=&quot;map3_data&quot; data-type=&quot;wkt&quot;&gt;
+    POLYGON((4 40, 5 40, 5 45, 4 45, 4 40), (4.2 41, 4.8 44, 4.8 41, 4.2 41))
+&lt;/textarea&gt;</pre>
+            <p>If you edit the polygon on the right, you will see the textarea below it change.</p>
+        </div>
+        <div class="span8 cols">
+            <p>into this</p>
+            <div data-map="map" data-input="#map3_data" style="width: 400px; height: 300px"></div>
+            <textarea id="map3_data" data-type="wkt" style="width: 400px; height: 200px; margin-top: 1em">POLYGON((4 40, 5 40, 5 45, 4 45, 4 40), (4.2 41, 4.8 44, 4.8 41, 4.2 41))</textarea>
+        </div>
+
+    </div>
+
+    <a name="kml-files">&nbsp;</a>
+    <h2>Load KML files</h2>
+
+    <div class="row">
+
+        <div class="span8 cols">
+            <p>Bootmap turns this</p>
+<pre>&lt;div id=&quot;map4&quot; data-map=&quot;map&quot; data-type=&quot;wkt-file&quot; style=&quot;width: 400px; height: 300px&quot;&gt;http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml&lt;/div&gt;</pre>
+        </div>
+        <div class="span8 cols">
+            <p>into this</p>
+            <div id="map4" data-map="map" data-type="wkt-file" style="width: 400px; height: 300px">http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml</div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; Dylan Verheul 2012</p>
+    </footer>
+
+</div>
+<!-- /container -->
+
+<script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+    try {
+        var pageTracker = _gat._getTracker("UA-7785995-4");
+        pageTracker._trackPageview();
+    } catch (err) {
+    }</script>
+</body>
+</html>

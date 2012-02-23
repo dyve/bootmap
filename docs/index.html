@@ -98,12 +98,12 @@
 
         <div class="span8 cols">
             <p>Bootmap turns this</p>
-            <pre>&lt;div style=&quot;width: 400px; height: 300px&quot; data-map=&quot;map&quot; data-lat=&quot;40&quot; data-lng=&quot;4&quot; data-zoom=&quot;5&quot;&gt;&lt;/div&gt;</pre>
+            <pre>&lt;div id=&quot;map1&quot; style=&quot;width: 400px; height: 300px&quot; data-map data-lat=&quot;40&quot; data-lng=&quot;4&quot; data-zoom=&quot;5&quot;&gt;&lt;/div&gt;</pre>
         </div>
         <div class="span8 cols">
             <p>into this</p>
 
-            <div style="width: 400px; height: 300px" data-map="map" data-lat="40" data-lng="4" data-zoom="5"></div>
+            <div id="map1" style="width: 400px; height: 300px" data-map data-lat="40" data-lng="4" data-zoom="5"></div>
         </div>
 
     </div>
@@ -115,16 +115,16 @@
 
         <div class="span8 cols">
             <p>Bootmap turns this</p>
-<pre>&lt;div data-map=&quot;map&quot; data-input=&quot;#map3_data&quot; style=&quot;width: 400px; height: 300px&quot;&gt;&lt;/div&gt;
-&lt;textarea id=&quot;map3_data&quot; data-type=&quot;wkt&quot;&gt;
+<pre>&lt;div id=&quot;map2&quot; data-map data-input=&quot;#map3_data&quot; style=&quot;width: 400px; height: 300px&quot;&gt;&lt;/div&gt;
+&lt;textarea data-map=&quot;map2&quot; data-format=&quot;wkt&quot;&gt;
     POLYGON((4 40, 5 40, 5 45, 4 45, 4 40), (4.2 41, 4.8 44, 4.8 41, 4.2 41))
 &lt;/textarea&gt;</pre>
             <p>If you edit the polygon on the right, you will see the textarea below it change.</p>
         </div>
         <div class="span8 cols">
             <p>into this</p>
-            <div data-map="map" data-input="#map3_data" style="width: 400px; height: 300px"></div>
-            <textarea id="map3_data" data-type="wkt" style="width: 400px; height: 200px; margin-top: 1em">POLYGON((4 40, 5 40, 5 45, 4 45, 4 40), (4.2 41, 4.8 44, 4.8 41, 4.2 41))</textarea>
+            <div id="map2" data-map style="width: 400px; height: 300px"></div>
+            <textarea data-map="map2" data-format="wkt" style="width: 400px; height: 200px; margin-top: 1em">POLYGON((4 40, 5 40, 5 45, 4 45, 4 40), (4.2 41, 4.8 44, 4.8 41, 4.2 41))</textarea>
         </div>
 
     </div>
@@ -136,11 +136,11 @@
 
         <div class="span8 cols">
             <p>Bootmap turns this</p>
-<pre>&lt;div id=&quot;map4&quot; data-map=&quot;map&quot; data-type=&quot;wkt-file&quot; style=&quot;width: 400px; height: 300px&quot;&gt;http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml&lt;/div&gt;</pre>
+<pre>&lt;div id=&quot;map3&quot; data-map data-format=&quot;wkt-file&quot; style=&quot;width: 400px; height: 300px&quot;&gt;http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml&lt;/div&gt;</pre>
         </div>
         <div class="span8 cols">
             <p>into this</p>
-            <div id="map4" data-map="map" data-type="wkt-file" style="width: 400px; height: 300px">http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml</div>
+            <div id="map3" data-format="wkt-file" style="width: 400px; height: 300px">http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml</div>
         </div>
 
     </div>

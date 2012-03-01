@@ -599,9 +599,7 @@
     };
 
     bootmap.initLayer = function(elem, options) {
-        var map, mapData, $mapElem;
-        var layer, overlay, overlays, i;
-        var bounds, center, ne;
+        var map, layer, mapData, $mapElem;
         var opts = $.extend({}, options);
         layer = parseLayerElem(elem, opts);
         if (!layer) {
@@ -620,24 +618,6 @@
             throw new Error("Cannot find map: " + layer.map ? layer.map : "(none)");
         }
         mapData.layers.push(layer);
-        bounds = map.getBounds();
-        if (!bounds) {
-            bounds = new google.maps.LatLngBounds();
-        }
-        overlays = createOverlaysFromLayers(mapData.layers);
-        for (i = 0; i < overlays.length; i++) {
-            overlay = overlays[i];
-            overlay.setMap(map);
-            bounds.union(getBoundsFromOverlay(overlay));
-        }
-        center = bounds.getCenter();
-        if (center.equals(bounds.getNorthEast())) {
-            bounds = new google.maps.Circle({
-                center: center,
-                radius: 1000
-            }).getBounds();
-        }
-        map.fitBounds(bounds);
         $mapElem.data({
             map: map,
             mapData: mapData
@@ -653,18 +633,44 @@
     };
 
     $.fn.bootmap = function (options) {
-        var layers = [];
+        var layers = [], maps = [];
         options = $.extend({}, $.fn.options, options);
         this.each(function () {
             var map = $(this).attr('data-map');
             if (!map || map === $(this).attr('id')) {
                 bootmap.initMap(this, options);
+                maps.push(this);
             } else {
                 layers.push(this);
             }
         });
         $.each(layers, function(index, layer) {
             bootmap.initLayer(layer, options);
+        });
+        $.each(maps, function(index, mapElem) {
+            var layer, overlay, overlays, i;
+            var bounds, center, ne;
+            var $mapElem = $(mapElem);
+            var map = $mapElem.data('map');
+            var mapData = $mapElem.data('mapData');
+            var bounds = map.getBounds();
+            if (!bounds) {
+                bounds = new google.maps.LatLngBounds();
+            }
+            overlays = createOverlaysFromLayers(mapData.layers);
+            for (i = 0; i < overlays.length; i++) {
+                overlay = overlays[i];
+                overlay.setMap(map);
+                bounds.union(getBoundsFromOverlay(overlay));
+            }
+            center = bounds.getCenter();
+            if (center.equals(bounds.getNorthEast())) {
+                bounds = new google.maps.Circle({
+                    center: center,
+                    radius: 1000
+                }).getBounds();
+            }
+            map.fitBounds(bounds);
         });
         return this;
     };

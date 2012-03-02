@@ -13,8 +13,8 @@ bootmap:
 #
 
 gh-pages: bootmap
-	mkdir -p ../gh-pages/current
-	cp ./src/*.js ../gh-pages/current
+	mkdir -p ../gh-pages/src
+	cp ./src/*.js ../gh-pages/src
 	mkdir -p ../gh-pages/${BOOTMAP_MAJOR_VERSION}
 	cp ./src/*.js ../gh-pages/${BOOTMAP_MAJOR_VERSION}
 	rm ../gh-pages/*.html
@@ -25,4 +25,3 @@ sdist: gh-pages
 	git add *
 	git commit -a -m "Updated gh-pages from Makefile"
 	git push
-

@@ -654,7 +654,7 @@
             var map = $mapElem.data('map');
             var mapData = $mapElem.data('mapData');
             var bounds = map.getBounds();
-            if (!bounds) {
+            if (bounds === undefined || bounds.toString().indexOf("NaN") !== -1) {
                 bounds = new google.maps.LatLngBounds();
             }
             overlays = createOverlaysFromLayers(mapData.layers);

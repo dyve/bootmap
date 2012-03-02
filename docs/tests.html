@@ -12,47 +12,9 @@
 
     <h1>BootMap demo</h1>
 
-    <p class="info">This is the demo.</p>
-
-    <hr>
-
-    <div id="map0" data-map data-format="wkt" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
-        Polygon ((4 40, 5 40, 5 45, 4                    45, 4 40)    ,    ( 4.2 41  , 4.8 44,4.8 41, 4.2   41 ))
-    </div>
-
-    <div id="map1" data-map data-format="json" data-lat="40" data-lng="4" data-zoom="8" style="width: 400px; height: 300px">
-        { "type": "Polygon", "coordinates": [ [ [4, 40], [5, 40], [5, 45], [4, 45], [4, 40] ], [ [4.2, 41], [4.8, 44], [4.8, 41], [4.2, 41] ] ] }
-    </div>
-
-    <div id="map2" data-map style="width: 400px; height: 300px"></div>
-
-    <textarea id="map2_data" data-map="map2" data-format="json">
-        {
-            "type": "GeometryCollection",
-            "geometries": [
-                {
-                    "type": "Point",
-                    "coordinates": [ 4, 40 ]
-                },
-                {
-                    "type": "MultiPoint",
-                    "coordinates": [ [ 5, 41 ], [ 3, 41 ] ]
-                },
-                {
-                    "type": "LineString",
-                    "coordinates": [ [ 4, 41 ], [ 5, 40 ] ]
-                }
-                    ]
-        }
-    </textarea>
-
-    <div id="map3" data-map data-input="#map3_data" style="width: 400px; height: 300px"></div>
-
-    <textarea id="map3_data" data-map="map3" data-format="wkt" data-stroke-color="#00f">
-        Polygon ((4 40, 5 40, 5 45, 4                    45, 4 40)    ,    ( 4.2 41  , 4.8 44,4.8 41, 4.2   41 ))
-    </textarea>
-
-    <div id="map4" data-map="map4" data-format="wkt-file" style="width: 400px; height: 300px">http://gmaps-samples.googlecode.com/svn/trunk/ggeoxml/cta.kml</div>
+	<div id="map1" data-map data-format="json" style="width: 400px; height: 300px">
+		{ "type": "GeometryCollection", "geometries": [ { "type": "Polygon", "coordinates": [ [ [ 4.6637821197509, 52.092743974926002 ], [ 4.6667432785035, 52.093693160599003 ], [ 4.6735668182373, 52.092638508603997 ], [ 4.6791458129883, 52.093060372394 ], [ 4.6840381622314, 52.091531097177999 ], [ 4.6838665008545, 52.090634601128997 ], [ 4.6792531013488, 52.089408481779998 ], [ 4.6730089187622, 52.091030116311998 ], [ 4.6656060218812, 52.091412444322998 ], [ 4.6635246276855, 52.091952971437998 ], [ 4.6637821197509, 52.092743974926002 ] ] ] } ] }
+	</div>
 
 </body>
 

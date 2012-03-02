@@ -658,19 +658,21 @@
                 bounds = new google.maps.LatLngBounds();
             }
             overlays = createOverlaysFromLayers(mapData.layers);
-            for (i = 0; i < overlays.length; i++) {
-                overlay = overlays[i];
-                overlay.setMap(map);
-                bounds.union(getBoundsFromOverlay(overlay));
+            if (overlays.length) {
+                for (i = 0; i < overlays.length; i++) {
+                    overlay = overlays[i];
+                    overlay.setMap(map);
+                    bounds.union(getBoundsFromOverlay(overlay));
+                }
+                center = bounds.getCenter();
+                if (center.equals(bounds.getNorthEast())) {
+                    bounds = new google.maps.Circle({
+                        center: center,
+                        radius: 1000
+                    }).getBounds();
+                }
+                map.fitBounds(bounds);
             }
-            center = bounds.getCenter();
-            if (center.equals(bounds.getNorthEast())) {
-                bounds = new google.maps.Circle({
-                    center: center,
-                    radius: 1000
-                }).getBounds();
-            }
-            map.fitBounds(bounds);
         });
         return this;
     };

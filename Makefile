@@ -6,22 +6,16 @@
 BOOTMAP_MAJOR_VERSION = 2
 
 bootmap:
-	uglifyjs -nc ./src/bootmap.js > ./src/bootmap.min.js
+	uglifyjs -nc ./assets/bootmap.js > ./assets/bootmap.min.js
 
 #
 # MAKE FOR GH-PAGES (for @dyve only)
 #
 
 gh-pages: bootmap
-	mkdir -p ../gh-pages/src
-	cp ./src/*.js ../gh-pages/src
+	rm -r ../gh-pages/assets
+	cp -r ./assets ../gh-pages/assets
 	mkdir -p ../gh-pages/${BOOTMAP_MAJOR_VERSION}
-	cp ./src/*.js ../gh-pages/${BOOTMAP_MAJOR_VERSION}
+	cp ./assets/*.js ../gh-pages/${BOOTMAP_MAJOR_VERSION}
 	rm ../gh-pages/*.html
-	cp ./docs/*html ../gh-pages
-
-sdist: gh-pages
-	cd ../gh-pages
-	git add *
-	git commit -a -m "Updated gh-pages from Makefile"
-	git push
+	cp ./*.html ../gh-pages

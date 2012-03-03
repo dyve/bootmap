@@ -12,9 +12,10 @@
 
     <h1>BootMap demo</h1>
 
-	<div id="map1" data-map data-format="json" style="width: 400px; height: 300px">
-		{ "type": "GeometryCollection", "geometries": [ { "type": "Polygon", "coordinates": [ [ [ 4.6637821197509, 52.092743974926002 ], [ 4.6667432785035, 52.093693160599003 ], [ 4.6735668182373, 52.092638508603997 ], [ 4.6791458129883, 52.093060372394 ], [ 4.6840381622314, 52.091531097177999 ], [ 4.6838665008545, 52.090634601128997 ], [ 4.6792531013488, 52.089408481779998 ], [ 4.6730089187622, 52.091030116311998 ], [ 4.6656060218812, 52.091412444322998 ], [ 4.6635246276855, 52.091952971437998 ], [ 4.6637821197509, 52.092743974926002 ] ] ] } ] }
-	</div>
+	<div style="width:400px;height:300px;" id="map_for_geom" data-map="map_for_geom" class=""></div>
+	<textarea style="display:none" rows="10" name="geom" cols="40" data-map="map_for_geom" data-format="wkt" id="id_geom" class="bootmap_input">
+		LINESTRING (4.4752272293881790 51.8834705074297133, 4.4749454659322412 51.8830368051348074)
+	</textarea>
 
 </body>
 

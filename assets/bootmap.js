@@ -5,7 +5,7 @@
         mapParameters: {
             lat: { type: "float" },
             lng: { type: "float" },
-            zoom: { type: "int", value: 8 },
+            zoom: { type: "int", value: 8 }
         },
         layerParameters: {
             "stroke-color": { type: "string" },
@@ -18,6 +18,13 @@
             POLYGON: "POLYGON",
             POLYLINE: "POLYLINE",
             MARKER: "MARKER"
+        },
+        options: {
+            strokeColor: "#0066b2",
+            strokeOpacity: 0.5,
+            strokeWeight: 2,
+            fillColor: "#0066b2",
+            fillOpacity: 0.25
         }
     };
 
@@ -88,13 +95,13 @@
         var opts = $.extend({}, options);
         opts.path = createPath(coordinates);
         return new google.maps.Polyline(opts);
-    }
+    };
 
     var createPolygon = function (coordinates, options) {
         var opts = $.extend({}, options);
         opts.paths = createPaths(coordinates);
         return new google.maps.Polygon(opts);
-    }
+    };
 
     var wktPathsToCoordinates = function (wktPaths) {
         var paths = wktPaths
@@ -109,7 +116,7 @@
         try {
             paths = $.parseJSON(paths);
         } catch (e) {
-            throw new Error("Cannot parse WKT path to coordinates array")
+            throw new Error("Cannot parse WKT path to coordinates array");
         }
         return paths;
     };
@@ -482,7 +489,7 @@
                     result = multiGeom('Polygon', geom.coordinates);
                     break;
                 default:
-                    throw Error("Bootmap cannot handle geometries of type '" + geom.type + "'");
+                    throw new Error("Bootmap cannot handle geometries of type '" + geom.type + "'");
             }
         }
         return result;
@@ -628,14 +635,16 @@
         return typeof(google) !== 'undefined' && typeof(google.maps) !== 'undefined' && typeof(google.maps.drawing) !== 'undefined';
     };
 
-    bootmap.init = function () {
-        $("[data-map]").bootmap();
-    };
-
-    $.fn.bootmap = function (options) {
+    bootmap.init = function (context) {
         var layers = [], maps = [];
-        options = $.extend({}, $.fn.options, options);
-        this.each(function () {
+        var options = $.extend({}, bootmap.options);
+        var $dom, selector = "[data-map]";
+        if (context) {
+            $dom = $(selector, $(context));
+        } else {
+            $dom = $(selector);
+        }
+        $dom.each(function(index) {
             var map = $(this).attr('data-map');
             if (!map || map === $(this).attr('id')) {
                 bootmap.initMap(this, options);
@@ -648,12 +657,12 @@
             bootmap.initLayer(layer, options);
         });
         $.each(maps, function(index, mapElem) {
-            var layer, overlay, overlays, i;
-            var bounds, center, ne;
+            var overlay, overlays, i;
+            var bounds, center;
             var $mapElem = $(mapElem);
             var map = $mapElem.data('map');
             var mapData = $mapElem.data('mapData');
-            var bounds = map.getBounds();
+            bounds = map.getBounds();
             if (bounds === undefined || bounds.toString().indexOf("NaN") !== -1) {
                 bounds = new google.maps.LatLngBounds();
             }
@@ -674,10 +683,6 @@
                 map.fitBounds(bounds);
             }
         });
-        return this;
-    };
-
-    $.fn.bootmap.defaults = {
     };
 
     window.bootmap = bootmap;

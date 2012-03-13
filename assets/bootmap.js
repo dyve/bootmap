@@ -123,6 +123,7 @@
 
     var wktToGeom = function (wkt) {
         var type, pathsText, paths, pos = wkt.indexOf("(");
+        var geoms, wkts;
         if (pos === -1) {
             throw new Error("Invalid WKT, format not recognized");
         }
@@ -131,6 +132,22 @@
             throw new Error("Invalid WKT, no type specified");
         }
         pathsText = wkt.substr(pos);
+        if (type === "GEOMETRYCOLLECTION") {
+            pathsText = $.trim(pathsText);
+            if (pathsText.indexOf("GEOMETRYCOLLECTION") !== -1) {
+                throw new Error("Bootmap does not support nested GEOMETRYCOLLECTION in WKT");
+            }
+            pathsText = pathsText.substr(1, pathsText.length - 2);
+            geoms = [];
+            wkts = pathsText.split(/\,\s*(?=[A-Z])/);
+            $.each(wkts, function(index, wkt) {
+                geoms.push(wktToGeom(wkt));
+            });
+            return {
+                type: 'GeometryCollection',
+                geometries: geoms
+            }
+        }
         paths = wktPathsToCoordinates(pathsText);
         switch (type) {
             case "POINT":

@@ -6,26 +6,14 @@
     <title>BootMap demo</title>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script src="../assets/bootmap.js"></script>
-	<script>
-var url;
-function reloader() {
-	$("#demo").html("RELOAD").load("ajax1.html", function() {
-		bootmap.init();
-	});
-}
-$(function() {
-	$("#load").click(reloader);
-});
-	</script>
 </head>
 
 <body>
 
-    <h1>BootMap Ajax demo</h1>
+    <h1>BootMap Temp test</h1>
 
-	<a href="#" id="load">LOAD</a>
-	
-	<p id="demo">TEST</p>
+	<div class="map" id="find_or_create" data-map data-lat="52" data-lng="4" data-zoom="8" style="width: 300px; height: 300px"></div>
+	<textarea name="geom" class="bootmap_hidden" data-map="find_or_create" data-format="wkt">GEOMETRYCOLLECTION (GEOMETRYCOLLECTION (POLYGON ((4.6637821197509002 52.0927439749260017, 4.6667432785034997 52.0936931605990026, 4.6735668182373002 52.0926385086039971, 4.6791458129882999 52.0930603723939996, 4.6840381622314000 52.0915310971779988, 4.6838665008545002 52.0906346011289969, 4.6792531013487997 52.0894084817799978, 4.6730089187621999 52.0910301163119982, 4.6656060218812003 52.0914124443229980, 4.6635246276854998 52.0919529714379976, 4.6637821197509002 52.0927439749260017))))</textarea>
 
 </body>
 

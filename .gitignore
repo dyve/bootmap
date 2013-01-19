@@ -1,11 +1,3 @@
-doc-src/_build/*
-doc/*
-*.pyc
-*.swp
-.sass-cache
 .idea*
 .DS_Store
-MANIFEST
-dist/
-django_bootstrap.egg-info/
 gh-pages/

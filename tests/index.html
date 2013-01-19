@@ -20,6 +20,14 @@ test( "require window.jQuery", function() {
     ok( window.jQuery, "jQuery available" );
 });
 
+test( "require window.bootmap", function() {
+    ok( window.bootmap, "bootmap available" );
+});
+
+test( "require window.bootmap.init function", function() {
+    ok($.isFunction(window.bootmap.init), "bootmap.init is function" );
+});
+
 // End tests
     </script>
 </body>

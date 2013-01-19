@@ -105,11 +105,11 @@
 
     var wktPathsToCoordinates = function (wktPaths) {
         var paths = wktPaths
-            .replace(/([\d\.])\s+([\d\.])/g, '$1#$2')
+            .replace(/([+-]?[\d\.])\s+([+-]?[\d\.])/g, '$1#$2')
             .replace(/\s/g, '')
-            .replace(/\(([\d\.])/g, '(($1')
-            .replace(/([\d\.])\)/g, '$1))')
-            .replace(/([\d\.])\,([\d\.])/g, '$1),($2')
+            .replace(/\(([+-]?[\d\.])/g, '(($1')
+            .replace(/([+-]?[\d\.])\)/g, '$1))')
+            .replace(/([+-]?[\d\.])\,([+-]?[\d\.])/g, '$1),($2')
             .replace(/\#/g, ',')
             .replace(/\)/g, ']')
             .replace(/\(/g, '[');

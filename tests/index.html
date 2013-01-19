@@ -28,8 +28,19 @@ test( "require window.bootmap.init function", function() {
     ok($.isFunction(window.bootmap.init), "bootmap.init is function" );
 });
 
+test( "automatically convert simple map", function() {
+    var $fixture = $("#qunit-fixture");
+    $fixture.append('<div id="map" data-role="map-canvas"></div>')
+    console.log($fixture);
+    bootmap.init();
+    ok($("#map").data("bootmap"), "BootMap found simple map" );
+});
+
+
+
 // End tests
     </script>
+    <div id="qunit-fixture"></div>
 </body>
 
 </html>

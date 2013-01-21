@@ -15,10 +15,17 @@
      * Function that is run on page ready by jQuery
      */
     bootmap.init = function() {
+
+        // Init every map canvas
         $("[data-role='map-canvas']").each(function() {
-            var $mapCanvas = $(this);
-            $mapCanvas.data('bootmap', true);
+            $(this).data('bootmap', true);
         });
+
+        // Init every map layer
+        $("[data-role='map-layer']").each(function() {
+            $(this).data('bootmap', true);
+        });
+
     };
 
     /**

@@ -36,7 +36,13 @@ test( "automatically convert simple map", function() {
     ok($("#map").data("bootmap"), "BootMap found simple map" );
 });
 
-
+test( "automatically convert simple layer", function() {
+    var $fixture = $("#qunit-fixture");
+    $fixture.append('<div id="layer" data-role="map-layer"></div>')
+    console.log($fixture);
+    bootmap.init();
+    ok($("#layer").data("bootmap"), "BootMap found simple layer" );
+});
 
 // End tests
     </script>

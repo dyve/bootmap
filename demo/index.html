@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>BootMap Demo</title>
+    <!-- Load full jQuery 1.9.0 so we better understand errors -->
+    <script src="//maps.google.com/maps/api/js?sensor=false"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="../js/bootmap.js"></script>
+    <script src="../js/bootmap.google.js"></script>
+</head>
+
+<body>
+
+    <h1>BootMap Demo</h1>
+
+    <div style="width: 500px; height: 400px"
+         data-role="map-canvas"
+         data-x="4"
+         data-y="52"
+            >
+        demo
+    </div>
+
+    <span data-role="map-layer">
+        {
+            "type": "Point",
+            "coordinates": [4, 52]
+        }
+    </span>
+
+</body>
+
+</html>
